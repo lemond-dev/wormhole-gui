@@ -11,6 +11,7 @@ import {
   lastError,
   closeReason,
   pushMessage,
+  updateMessage,
   reset,
 } from './store.js';
 
@@ -93,6 +94,77 @@ export async function setupListeners() {
       lastError.set({ code: e.payload.code, message: e.payload.message });
     })
   );
+
+  // ── File transfer events ──
+  unlistenFns.push(
+    await listen('msg:file_offer', (e) => {
+      pushMessage({
+        kind: 'file',
+        side: 'peer',
+        id: e.payload.id,
+        name: e.payload.name,
+        size: e.payload.size,
+        mime: e.payload.mime,
+        state: 'offer',
+        bytes: 0,
+        ts: Date.now(),
+      });
+    })
+  );
+
+  unlistenFns.push(
+    await listen('msg:file_offer_sent', (e) => {
+      pushMessage({
+        kind: 'file',
+        side: 'self',
+        id: e.payload.id,
+        name: e.payload.name,
+        size: e.payload.size,
+        state: 'awaiting',
+        bytes: 0,
+        ts: Date.now(),
+      });
+    })
+  );
+
+  unlistenFns.push(
+    await listen('file:accepted', (e) => {
+      updateMessage(e.payload.id, { state: 'sending', bytes: 0 });
+    })
+  );
+
+  unlistenFns.push(
+    await listen('file:progress', (e) => {
+      const { id, bytes, total, dir } = e.payload;
+      updateMessage(id, {
+        state: dir === 'in' ? 'receiving' : 'sending',
+        bytes,
+        size: total,
+      });
+    })
+  );
+
+  unlistenFns.push(
+    await listen('file:done', (e) => {
+      const { id, ok, dir, save_path } = e.payload;
+      const next = ok
+        ? { state: dir === 'in' ? 'received' : 'sent', save_path: save_path || null }
+        : { state: 'failed', error: '传输失败' };
+      updateMessage(id, next);
+    })
+  );
+
+  unlistenFns.push(
+    await listen('file:cancelled', (e) => {
+      updateMessage(e.payload.id, { state: 'cancelled' });
+    })
+  );
+
+  unlistenFns.push(
+    await listen('file:error', (e) => {
+      updateMessage(e.payload.id, { state: 'failed', error: e.payload.message });
+    })
+  );
 }
 
 export async function teardownListeners() {
@@ -122,6 +194,22 @@ export async function confirmSas(matches) {
 
 export async function sendText(content) {
   await invoke('send_text', { content });
+}
+
+export async function sendFile(path) {
+  await invoke('send_file', { path });
+}
+
+export async function acceptFile(id) {
+  await invoke('accept_file', { id });
+}
+
+export async function rejectFile(id, reason) {
+  await invoke('reject_file', { id, reason });
+}
+
+export async function cancelFile(id) {
+  await invoke('cancel_file', { id });
 }
 
 export async function closeSession() {

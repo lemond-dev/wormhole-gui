@@ -17,6 +17,10 @@ pub fn run() {
             commands::start_session,
             commands::confirm_sas,
             commands::send_text,
+            commands::send_file,
+            commands::accept_file,
+            commands::reject_file,
+            commands::cancel_file,
             commands::close_session,
         ])
         .setup(|_app| {

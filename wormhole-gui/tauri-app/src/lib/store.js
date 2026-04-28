@@ -34,12 +34,29 @@ export const lastError = writable(null);
 export const closeReason = writable(null);
 
 // Timeline messages: array of
-//   { kind: 'system' | 'text', side: 'self'|'peer', id, content, ts, status? }
+//   { kind: 'system' | 'text' | 'file', side: 'self'|'peer', id, ... }
+//
+// File entries carry a `state` field:
+//   'offer'      — peer sent us an offer; awaiting accept/reject
+//   'sending'    — outgoing transit in progress
+//   'receiving'  — incoming transit in progress
+//   'sent'       — outgoing complete (peer confirmed)
+//   'received'   — incoming complete (saved to disk)
+//   'cancelled'  — cancelled by self/peer
+//   'failed'     — error during transfer
+//   'awaiting'   — outgoing offer sent, peer hasn't accepted yet
 export const messages = writable([]);
 
 // Convenience: append a message
 export function pushMessage(m) {
   messages.update((list) => [...list, m]);
+}
+
+// In-place update message by id (used heavily for file cards).
+export function updateMessage(id, patch) {
+  messages.update((list) =>
+    list.map((m) => (m.id === id ? { ...m, ...patch } : m))
+  );
 }
 
 export function reset() {

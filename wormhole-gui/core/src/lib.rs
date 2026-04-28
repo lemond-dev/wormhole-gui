@@ -7,6 +7,7 @@
 pub mod error;
 pub mod protocol;
 pub mod session;
+pub mod storage;
 pub mod transfer;
 
 pub use error::CoreError;

@@ -3,55 +3,58 @@
 //! All messages are JSON-encoded and bounded to the v0.1 size cap (1 MB
 //! client-side; T1.5 verified server breaks above ~4 MB). The version field
 //! is strictly checked; unknown variants are rejected.
+//!
+//! File transfer protocol over mailbox (Phase 3):
+//!
+//!   sender   →   receiver:   FileOffer{id, name, size, mime, hints, abilities}
+//!   receiver →   sender:     FileAccept{id, hints, abilities}
+//!                          OR FileReject{id, reason}
+//!   sender   →   receiver:   FileCancel{id}      (during transit, optional)
+//!   receiver →   sender:     FileCancel{id}      (during transit, optional)
+//!   receiver →   sender:     FileDone{id, ok}    (after transit completes)
+//!
+//! Bytes themselves go over `magic_wormhole::transit`, not the mailbox.
 
+use magic_wormhole::transit::{Abilities, Hints};
 use serde::{Deserialize, Serialize};
 
 pub const PROTOCOL_VERSION: u32 = 1;
 
-/// Maximum allowed size of a single mailbox payload (JSON-serialized bytes).
-/// Server-side limit observed in T1.5 is between 4 MB and 16 MB; we cap
-/// well below that to keep wormhole alive.
-pub const MAX_MAILBOX_PAYLOAD: usize = 1 * 1024 * 1024;
+/// Maximum size of a single mailbox payload (JSON bytes). Server-side limit
+/// is between 4 MB and 16 MB (T1.5); we cap well below.
+pub const MAX_MAILBOX_PAYLOAD: usize = 1024 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AppMsg {
-    /// Both sides emit this once their local user has confirmed the SAS.
+    // ─── Connection negotiation ───
     SasOk { v: u32 },
-    /// Either side may emit this if the SAS didn't match. Other side must close.
     SasReject { v: u32, reason: String },
-    /// A chat-style text message.
-    Text {
-        v: u32,
-        id: String,
-        content: String,
-        ts: u64,
-    },
-    /// Sender is offering a file. Receiver responds with FileAccept or FileReject.
+
+    // ─── Chat ───
+    Text { v: u32, id: String, content: String, ts: u64 },
+
+    // ─── File transfer (transit hints inlined) ───
     FileOffer {
         v: u32,
         id: String,
         name: String,
         size: u64,
         mime: Option<String>,
+        hints: Hints,
+        abilities: Abilities,
     },
-    FileAccept { v: u32, id: String },
-    FileReject { v: u32, id: String, reason: String },
-    /// Sender attaches its transit hints + abilities for this offer.
-    /// Receiver echoes its own.
-    TransitHints {
+    FileAccept {
         v: u32,
         id: String,
-        // The hints/abilities are opaque JSON value here; the transfer
-        // layer (transfer.rs) deserializes into magic_wormhole::transit
-        // types when needed.
-        hints: serde_json::Value,
-        abilities: serde_json::Value,
+        hints: Hints,
+        abilities: Abilities,
     },
-    /// Receiver acknowledges a successfully received file by id.
-    FileDone { v: u32, id: String, ok: bool },
-    /// Either side cancels an in-flight file by id.
+    FileReject { v: u32, id: String, reason: String },
     FileCancel { v: u32, id: String },
+    FileDone { v: u32, id: String, ok: bool },
+
+    // ─── Misc ───
     Ping { v: u32 },
     Bye { v: u32 },
 }
@@ -59,17 +62,16 @@ pub enum AppMsg {
 impl AppMsg {
     pub fn version(&self) -> u32 {
         match self {
-            AppMsg::SasOk { v } => *v,
-            AppMsg::SasReject { v, .. } => *v,
-            AppMsg::Text { v, .. } => *v,
-            AppMsg::FileOffer { v, .. } => *v,
-            AppMsg::FileAccept { v, .. } => *v,
-            AppMsg::FileReject { v, .. } => *v,
-            AppMsg::TransitHints { v, .. } => *v,
-            AppMsg::FileDone { v, .. } => *v,
-            AppMsg::FileCancel { v, .. } => *v,
-            AppMsg::Ping { v } => *v,
-            AppMsg::Bye { v } => *v,
+            AppMsg::SasOk { v }
+            | AppMsg::SasReject { v, .. }
+            | AppMsg::Text { v, .. }
+            | AppMsg::FileOffer { v, .. }
+            | AppMsg::FileAccept { v, .. }
+            | AppMsg::FileReject { v, .. }
+            | AppMsg::FileCancel { v, .. }
+            | AppMsg::FileDone { v, .. }
+            | AppMsg::Ping { v }
+            | AppMsg::Bye { v } => *v,
         }
     }
 

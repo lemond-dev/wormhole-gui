@@ -2,6 +2,7 @@
 
 use crate::bridge::{start_event_pump, SessionState};
 use serde::Deserialize;
+use std::path::PathBuf;
 use std::str::FromStr;
 use tauri::{AppHandle, State};
 use wormhole_gui_core::{spawn_session_thread, Cmd, Role};
@@ -13,6 +14,15 @@ pub enum SessionMode {
     Recv,
 }
 
+fn cmd_tx(state: &SessionState) -> Result<async_channel::Sender<Cmd>, String> {
+    let guard = state.handle.lock().unwrap();
+    Ok(guard
+        .as_ref()
+        .ok_or_else(|| "no active session".to_string())?
+        .cmd_tx
+        .clone())
+}
+
 #[tauri::command]
 pub async fn start_session(
     app: AppHandle,
@@ -20,19 +30,16 @@ pub async fn start_session(
     mode: SessionMode,
     code: Option<String>,
 ) -> Result<(), String> {
-    // If a session is already running, refuse.
     {
         let guard = state.handle.lock().unwrap();
         if guard.is_some() {
             return Err("session already running".into());
         }
     }
-
     let role = match mode {
         SessionMode::Send => Role::Allocator,
         SessionMode::Recv => Role::Joiner,
     };
-
     let handle = spawn_session_thread(role);
     let evt_rx = handle.evt_rx.clone();
 
@@ -54,30 +61,55 @@ pub async fn start_session(
 
 #[tauri::command]
 pub async fn confirm_sas(state: State<'_, SessionState>, matches: bool) -> Result<(), String> {
-    let tx = {
-        let guard = state.handle.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or_else(|| "no active session".to_string())?
-            .cmd_tx
-            .clone()
-    };
-    tx.send(Cmd::ConfirmSas { matches })
+    cmd_tx(&state)?
+        .send(Cmd::ConfirmSas { matches })
         .await
         .map_err(|_| "session thread closed".into())
 }
 
 #[tauri::command]
 pub async fn send_text(state: State<'_, SessionState>, content: String) -> Result<(), String> {
-    let tx = {
-        let guard = state.handle.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or_else(|| "no active session".to_string())?
-            .cmd_tx
-            .clone()
-    };
-    tx.send(Cmd::SendText(content))
+    cmd_tx(&state)?
+        .send(Cmd::SendText(content))
+        .await
+        .map_err(|_| "session thread closed".into())
+}
+
+#[tauri::command]
+pub async fn send_file(state: State<'_, SessionState>, path: String) -> Result<(), String> {
+    cmd_tx(&state)?
+        .send(Cmd::SendFile { path: PathBuf::from(path) })
+        .await
+        .map_err(|_| "session thread closed".into())
+}
+
+#[tauri::command]
+pub async fn accept_file(state: State<'_, SessionState>, id: String) -> Result<(), String> {
+    cmd_tx(&state)?
+        .send(Cmd::AcceptFile { id })
+        .await
+        .map_err(|_| "session thread closed".into())
+}
+
+#[tauri::command]
+pub async fn reject_file(
+    state: State<'_, SessionState>,
+    id: String,
+    reason: Option<String>,
+) -> Result<(), String> {
+    cmd_tx(&state)?
+        .send(Cmd::RejectFile {
+            id,
+            reason: reason.unwrap_or_else(|| "user_reject".into()),
+        })
+        .await
+        .map_err(|_| "session thread closed".into())
+}
+
+#[tauri::command]
+pub async fn cancel_file(state: State<'_, SessionState>, id: String) -> Result<(), String> {
+    cmd_tx(&state)?
+        .send(Cmd::CancelFile { id })
         .await
         .map_err(|_| "session thread closed".into())
 }
