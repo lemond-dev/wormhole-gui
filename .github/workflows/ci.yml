@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rust:
+    name: Rust (test + clippy + build)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: wormhole-gui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wormhole-gui
+
+      - name: cargo fmt
+        run: cargo fmt --all --check
+
+      - name: cargo clippy (core only — tauri-app needs frontend dist)
+        run: cargo clippy -p wormhole-gui-core -- -D warnings
+
+      - name: cargo test (core)
+        run: cargo test -p wormhole-gui-core
+
+  spike:
+    name: Spike crate (sanity)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: wormhole-spike
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wormhole-spike
+      - name: cargo build
+        run: cargo build --release

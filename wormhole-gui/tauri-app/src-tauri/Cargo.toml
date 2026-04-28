@@ -1,0 +1,33 @@
+[package]
+name = "wormhole-gui-tauri"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+name = "wormhole_gui_tauri_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true }
+
+# Project crates
+wormhole-gui-core = { path = "../../core" }
+
+# Bridge channel — used to drive the smol session thread from Tauri's tokio.
+async-channel.workspace = true
+
+# magic-wormhole types we re-expose at the IPC boundary (Code parsing)
+magic-wormhole.workspace = true

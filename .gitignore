@@ -1,0 +1,46 @@
+# Rust
+target/
+Cargo.lock.bak
+
+# Node
+node_modules/
+dist/
+.vite/
+*.log
+.npm/
+.pnpm-store/
+.pnpm-debug.log*
+
+# Tauri
+**/src-tauri/gen/
+**/src-tauri/target/
+**/src-tauri/WixTools/
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+.history/
+
+# Claude Code per-project settings (machine-local)
+.claude/
+
+# Build outputs
+*.msi
+*.dmg
+*.deb
+*.AppImage
+
+# Keys / secrets — must never be committed
+*.key
+*.pfx
+*.p12
+.env
+.env.local

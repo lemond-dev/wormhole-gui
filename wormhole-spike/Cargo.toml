@@ -1,0 +1,33 @@
+[package]
+name = "wormhole-spike"
+version = "0.0.1"
+edition = "2021"
+
+# Tier 1 spike for the wormhole-gui v0.1 architecture.
+#
+# magic-wormhole 0.8 uses the smol async ecosystem (async-io, async-tungstenite
+# with smol-runtime). Driving it from tokio would require async-compat and is
+# avoided here.
+
+[dependencies]
+magic-wormhole = { version = "0.8", default-features = false, features = ["transit", "transfer"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+futures = "0.3"
+smol = "2"
+async-channel = "2"
+async-lock = "3"
+url = "2"
+memory-stats = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+
+[[bin]]
+name = "spike"
+path = "src/main.rs"
+
+[[bin]]
+name = "bridge"
+path = "src/bridge.rs"
