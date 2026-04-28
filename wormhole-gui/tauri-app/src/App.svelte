@@ -13,6 +13,7 @@
   import Session from './lib/screens/Session.svelte';
   import ErrorScreen from './lib/screens/Error.svelte';
   import Closed from './lib/screens/Closed.svelte';
+  import Settings from './lib/screens/Settings.svelte';
 
   onMount(setupListeners);
   onDestroy(teardownListeners);
@@ -34,4 +35,6 @@
   <ErrorScreen />
 {:else if $appState === 'closed'}
   <Closed />
+{:else if $appState === 'settings'}
+  <Settings />
 {/if}

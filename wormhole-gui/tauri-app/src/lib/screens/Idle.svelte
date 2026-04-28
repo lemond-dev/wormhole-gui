@@ -5,13 +5,19 @@
 
   function chooseSend() { startSend(); }
   function chooseRecv() { appState.set('joiner-input'); }
+  function openSettings() { appState.set('settings'); }
 </script>
 
 <div class="wm-app">
   <div class="wm-idle">
-    <div class="wordmark">
-      <span class="badge"><Icon name="shield-check" size={13} stroke={2.2} /></span>
-      Wormhole
+    <div class="wordmark-row">
+      <div class="wordmark">
+        <span class="badge"><Icon name="shield-check" size={13} stroke={2.2} /></span>
+        Wormhole
+      </div>
+      <button class="settings-btn" title="设置" on:click={openSettings}>
+        <Icon name="settings" size={16} />
+      </button>
     </div>
     <h1 style="margin-top: 28px;">建立一次性加密会话</h1>
     <div class="lede">
@@ -36,3 +42,27 @@
     </div>
   </div>
 </div>
+
+<style>
+  .wordmark-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .settings-btn {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: var(--text-3);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .settings-btn:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+</style>

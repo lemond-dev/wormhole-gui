@@ -3,6 +3,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { get } from 'svelte/store';
 import {
   appState,
   code,
@@ -14,6 +15,23 @@ import {
   updateMessage,
   reset,
 } from './store.js';
+
+/**
+ * Decide which screen to switch to when the session closes. The reason string
+ * is whatever the backend's CoreError::Display produced (or "ok").
+ */
+function pickClosedScreen(reason) {
+  const r = (reason || '').toLowerCase();
+  if (r === 'ok' || r === '') return 'closed';
+  if (r.includes('pake')) return 'error';        // wrong code
+  if (r.includes('rendezvous') || r.includes('io error') || r.includes('connection')) return 'error';
+  if (r.includes('user_mismatch') || r.includes('rejected sas')) return 'error';
+  return 'error';
+}
+
+function raw_error_get() {
+  return get(lastError);
+}
 
 let unlistenFns = [];
 
@@ -50,17 +68,15 @@ export async function setupListeners() {
 
   unlistenFns.push(
     await listen('session:closed', (e) => {
-      closeReason.set(e.payload.reason);
-      // Decide which screen: on graceful close go back to idle; on error stay
-      // on error screen. The reason string distinguishes them.
       const reason = e.payload.reason || '';
-      if (reason === 'ok' || reason === 'PAKE failed (code wrong, or attacker)') {
-        if (reason.includes('PAKE')) appState.set('error');
-        else appState.set('closed');
-      } else {
-        // Any other reason is treated as an error.
-        appState.set('error');
+      closeReason.set(reason);
+      const next = pickClosedScreen(reason);
+      if (next === 'error' && !raw_error_get()) {
+        // Surface the close reason as an error too so the Error screen
+        // can show the actual message under the friendly title.
+        lastError.set({ code: 'closed', message: reason });
       }
+      appState.set(next);
     })
   );
 

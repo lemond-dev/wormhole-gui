@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import SimpleHeader from '../components/SimpleHeader.svelte';
   import CodeBanner from '../components/CodeBanner.svelte';
-  import { code, appState, reset } from '../store.js';
+  import { code, appState, reset, lastError } from '../store.js';
   import { closeSession } from '../ipc.js';
 
   // 5-min TTL countdown
@@ -22,6 +22,10 @@
       remainingSec -= 1;
       if (remainingSec <= 0) {
         clearInterval(timer);
+        // Mark this as an "expired" error so the Error screen picks the
+        // right wording, then close the backend session.
+        lastError.set({ code: 'code_expired', message: '短码已过期 (code expired)' });
+        closeSession().catch(() => {});
         appState.set('error');
       }
     }, 1000);
