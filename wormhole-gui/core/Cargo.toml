@@ -16,3 +16,6 @@ futures.workspace = true
 smol.workspace = true
 async-channel.workspace = true
 tracing.workspace = true
+
+# Numeric short-code generation (allocator path).
+rand = "0.8"

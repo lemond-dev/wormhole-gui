@@ -20,8 +20,17 @@ impl SessionState {
 pub fn start_event_pump(app: AppHandle, evt_rx: async_channel::Receiver<Evt>) {
     tauri::async_runtime::spawn(async move {
         while let Ok(evt) = evt_rx.recv().await {
+            let is_closed = matches!(&evt, Evt::Closed { .. });
             if let Err(e) = emit_evt(&app, evt) {
                 tracing::warn!("emit failed: {e}");
+            }
+            if is_closed {
+                // Session ended (graceful or via error). Clear the stale
+                // handle so the next start_session isn't blocked by the
+                // is_some() guard from a thread that has already exited.
+                use tauri::Manager;
+                let state = app.state::<SessionState>();
+                let _ = state.handle.lock().map(|mut g| g.take());
             }
         }
         tracing::debug!("event pump exiting");

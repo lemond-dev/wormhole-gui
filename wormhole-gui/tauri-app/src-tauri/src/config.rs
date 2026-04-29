@@ -15,10 +15,18 @@ pub struct Config {
     pub download_dir: PathBuf,
     #[serde(default)]
     pub auto_accept: bool,
+    /// New in v0.2.1. Old configs without this field default to true so
+    /// upgraded users get numeric codes by default.
+    #[serde(default = "default_numeric_code")]
+    pub numeric_code: bool,
 }
 
 fn default_version() -> u32 {
     SCHEMA_VERSION
+}
+
+fn default_numeric_code() -> bool {
+    true
 }
 
 impl Default for Config {
@@ -27,6 +35,7 @@ impl Default for Config {
             version: SCHEMA_VERSION,
             download_dir: wormhole_gui_core::storage::default_download_dir(),
             auto_accept: false,
+            numeric_code: true,
         }
     }
 }
@@ -87,6 +96,9 @@ impl ConfigState {
     }
     pub fn download_dir(&self) -> PathBuf {
         self.0.lock().unwrap().download_dir.clone()
+    }
+    pub fn numeric_code(&self) -> bool {
+        self.0.lock().unwrap().numeric_code
     }
 }
 

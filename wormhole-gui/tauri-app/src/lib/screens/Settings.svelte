@@ -7,7 +7,7 @@
   // Read-only display of where the relays live; not configurable in v0.2.
   const MAILBOX_RELAY = 'ws://relay.magic-wormhole.io:4000/v1';
   const TRANSIT_RELAY = 'tcp:transit.magic-wormhole.io:4001';
-  const VERSION = '0.2.0';
+  const VERSION = '0.2.1';
 
   let config = null;
   let saving = false;
@@ -25,6 +25,11 @@
 
   async function toggleAutoAccept(e) {
     config = { ...config, auto_accept: e.currentTarget.checked };
+    await persist();
+  }
+
+  async function toggleNumericCode(e) {
+    config = { ...config, numeric_code: e.currentTarget.checked };
     await persist();
   }
 
@@ -69,6 +74,16 @@
         </span>
       </div>
 
+      <div class="field">
+        <label>
+          <input type="checkbox" checked={config.numeric_code} on:change={toggleNumericCode} disabled={saving} />
+          使用数字短码
+        </label>
+        <span class="hint">
+          示例：15-123-456。比英文词稍弱但口播更顺；下次会话生效。
+        </span>
+      </div>
+
       <div class="wm-divider"></div>
 
       <div class="field">
@@ -85,9 +100,6 @@
 
       <div class="version-row">
         <span>Wormhole-GUI v{VERSION}</span>
-        <a href="https://github.com/lemond-dev/chat_one" target="_blank" rel="noopener">
-          GitHub ↗
-        </a>
       </div>
     {:else}
       <div class="hint">加载中…</div>

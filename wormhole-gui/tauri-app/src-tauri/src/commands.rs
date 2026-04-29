@@ -4,7 +4,6 @@ use crate::bridge::{start_event_pump, SessionState};
 use crate::config::{self, Config, ConfigState};
 use serde::Deserialize;
 use std::path::PathBuf;
-use std::str::FromStr;
 use tauri::{AppHandle, State};
 use wormhole_gui_core::{spawn_session_thread, Cmd, Role};
 
@@ -28,6 +27,7 @@ fn cmd_tx(state: &SessionState) -> Result<async_channel::Sender<Cmd>, String> {
 pub async fn start_session(
     app: AppHandle,
     state: State<'_, SessionState>,
+    config: State<'_, ConfigState>,
     mode: SessionMode,
     code: Option<String>,
 ) -> Result<(), String> {
@@ -41,13 +41,28 @@ pub async fn start_session(
         SessionMode::Send => Role::Allocator,
         SessionMode::Recv => Role::Joiner,
     };
-    let handle = spawn_session_thread(role);
+    let handle = spawn_session_thread(role, config.numeric_code());
     let evt_rx = handle.evt_rx.clone();
 
     if let SessionMode::Recv = mode {
         let code_str = code.ok_or_else(|| "code required for recv mode".to_string())?;
-        let parsed = magic_wormhole::Code::from_str(&code_str)
-            .map_err(|e| format!("invalid code: {e}"))?;
+        // Bypass magic-wormhole's zxcvbn check on Code::from_str: 6-digit
+        // numeric codes (now the default) sometimes fall under the 16-bit
+        // entropy threshold for sequence-like values (e.g. "123-456"). Our
+        // 5-min TTL + relay-side PAKE handle the actual integrity check.
+        let (np, pw) = code_str
+            .split_once('-')
+            .ok_or_else(|| "短码格式错误：缺少 '-' 分隔".to_string())?;
+        if np.is_empty() || pw.is_empty() {
+            return Err("短码格式错误：nameplate 或 password 为空".to_string());
+        }
+        #[allow(unsafe_code)]
+        let parsed = unsafe {
+            magic_wormhole::Code::from_components(
+                magic_wormhole::Nameplate::new_unchecked(np),
+                magic_wormhole::Password::new_unchecked(pw),
+            )
+        };
         handle
             .cmd_tx
             .send(Cmd::JoinCode(parsed))

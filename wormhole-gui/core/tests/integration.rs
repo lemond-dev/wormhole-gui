@@ -67,8 +67,8 @@ fn send_blocking<T>(tx: &async_channel::Sender<T>, msg: T) {
 #[test]
 #[ignore = "needs network: public magic-wormhole relay"]
 fn happy_path_allocator_joiner() {
-    let alloc = spawn_session_thread(Role::Allocator);
-    let join = spawn_session_thread(Role::Joiner);
+    let alloc = spawn_session_thread(Role::Allocator, false);
+    let join = spawn_session_thread(Role::Joiner, false);
 
     // 1. Allocator emits code; forward to joiner.
     let code = match wait_for(&alloc, Duration::from_secs(15), |e| matches!(e, Evt::Code(_))) {
@@ -106,8 +106,8 @@ fn happy_path_allocator_joiner() {
 #[test]
 #[ignore = "needs network: public magic-wormhole relay"]
 fn pake_failure_with_wrong_code() {
-    let alloc = spawn_session_thread(Role::Allocator);
-    let join = spawn_session_thread(Role::Joiner);
+    let alloc = spawn_session_thread(Role::Allocator, false);
+    let join = spawn_session_thread(Role::Joiner, false);
 
     let code = match wait_for(&alloc, Duration::from_secs(15), |e| matches!(e, Evt::Code(_))) {
         Evt::Code(s) => s,
@@ -139,8 +139,8 @@ fn pake_failure_with_wrong_code() {
 fn small_file_transfer_round_trip() {
     use std::io::Write;
 
-    let alloc = spawn_session_thread(Role::Allocator);
-    let join = spawn_session_thread(Role::Joiner);
+    let alloc = spawn_session_thread(Role::Allocator, false);
+    let join = spawn_session_thread(Role::Joiner, false);
 
     // Bring both sides to Connected, same as happy_path.
     let code = match wait_for(&alloc, Duration::from_secs(15), |e| matches!(e, Evt::Code(_))) {

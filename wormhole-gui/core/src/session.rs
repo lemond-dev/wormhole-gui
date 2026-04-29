@@ -96,14 +96,14 @@ pub struct SessionHandle {
     pub thread: std::thread::JoinHandle<()>,
 }
 
-pub fn spawn_session_thread(role: Role) -> SessionHandle {
+pub fn spawn_session_thread(role: Role, numeric_code: bool) -> SessionHandle {
     let (cmd_tx, cmd_rx) = bounded::<Cmd>(32);
     let (evt_tx, evt_rx) = bounded::<Evt>(128);
     let thread = std::thread::Builder::new()
         .name("wh-session".into())
         .spawn(move || {
             smol::block_on(async move {
-                let result = run(role, cmd_rx, evt_tx.clone()).await;
+                let result = run(role, numeric_code, cmd_rx, evt_tx.clone()).await;
                 let reason = match result {
                     Ok(()) => "ok".to_string(),
                     Err(e) => format!("{e}"),
@@ -152,6 +152,7 @@ struct IncomingPending {
 
 async fn run(
     role: Role,
+    numeric_code: bool,
     cmd_rx: Receiver<Cmd>,
     evt_tx: Sender<Evt>,
 ) -> Result<(), CoreError> {
@@ -159,7 +160,17 @@ async fn run(
     let cfg = mw_transfer::APP_CONFIG.clone();
     let mut wh = match role {
         Role::Allocator => {
-            let mc = MailboxConnection::create(cfg, 2).await?;
+            let mc = if numeric_code {
+                let pw = generate_numeric_password(6);
+                // SAFETY: zxcvbn would reject 6-digit passwords, but our 5-min
+                // TTL (Allocator screen) + 15s heartbeat already gate brute-force
+                // attempts well below the 1M-combo space.
+                #[allow(unsafe_code)]
+                let password = unsafe { magic_wormhole::Password::new_unchecked(pw) };
+                MailboxConnection::create_with_password(cfg, password).await?
+            } else {
+                MailboxConnection::create(cfg, 2).await?
+            };
             let code = mc.code().to_string();
             let _ = evt_tx.send(Evt::Code(code)).await;
             Wormhole::connect(mc).await?
@@ -653,6 +664,18 @@ async fn run_recv_task(
 // ============================================================
 // Helpers
 // ============================================================
+
+/// Generate a numeric short-code password split into two equal halves with a
+/// dash, e.g. `123-456`. The full wormhole code becomes `<nameplate>-123-456`.
+fn generate_numeric_password(digits: usize) -> String {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let raw: String = (0..digits)
+        .map(|_| char::from_digit(rng.gen_range(0..10), 10).unwrap())
+        .collect();
+    let mid = digits / 2;
+    format!("{}-{}", &raw[..mid], &raw[mid..])
+}
 
 fn make_id() -> String {
     let n = SystemTime::now()

@@ -6255,12 +6255,13 @@ dependencies = [
 
 [[package]]
 name = "wormhole-gui-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-channel",
  "futures",
  "magic-wormhole",
+ "rand 0.8.6",
  "serde",
  "serde_json",
  "smol",
@@ -6270,7 +6271,7 @@ dependencies = [
 
 [[package]]
 name = "wormhole-gui-tauri"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-channel",

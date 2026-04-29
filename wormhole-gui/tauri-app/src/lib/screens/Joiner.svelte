@@ -9,7 +9,9 @@
   let invalid = false;
 
   $: normalized = raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-  $: valid = /^\d{1,3}-[a-z]+(?:-[a-z]+)+$/.test(normalized);
+  // Accept both numeric (15-379-248) and PGP-word (26-dinosaur-spaniel)
+  // codes; magic-wormhole's relay enforces the actual nameplate format.
+  $: valid = /^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(normalized);
 
   async function connect() {
     if (!valid || busy) return;
@@ -39,12 +41,12 @@
   <div class="wm-flowpage">
     <h2>输入对方给你的短码</h2>
     <div class="desc">
-      格式形如 <span class="mono">26-dinosaur-spaniel</span>。自动小写并加连字符。
+      格式形如 <span class="mono">15-123-456</span> 或 <span class="mono">26-dinosaur-spaniel</span>。自动小写并加连字符。
     </div>
     <div class="wm-codeinput">
       <input
         bind:value={raw}
-        placeholder="nn-word-word"
+        placeholder="15-123-456"
         on:keydown={handleKey}
         autocomplete="off"
         autocapitalize="none"
@@ -60,10 +62,6 @@
     <button class="wm-btn primary" disabled={!valid || busy} on:click={connect}>
       {busy ? '连接中…' : '连接'}
     </button>
-    <div class="desc" style="margin-top:8px;">
-      <Icon name="info" size={12} stroke={1.75} />
-      连接成功后双方会看到 4 位数字，请通过电话或当面与对方核对。
-    </div>
     <div class="wm-mt-auto"></div>
     <button class="wm-btn ghost" on:click={back}>返回</button>
   </div>
