@@ -107,15 +107,48 @@ html, body {
 .wm-topbar .status svg { color: var(--brand); }
 .wm-topbar .code-pill {
   flex: 1;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--text-3);
-  letter-spacing: 0.02em;
+  font-size: 13px;
+  color: var(--brand-ink);
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-soft-2);
+  letter-spacing: 0.01em;
   cursor: default;
+  padding: 4px 10px;
+  border-radius: 999px;
+  min-width: 0;
+}
+.wm-topbar .code-pill .label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.wm-topbar .code-pill .val {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wm-topbar .timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
   padding: 4px 8px;
   border-radius: var(--r-sm);
+  background: var(--surface-2);
+  flex-shrink: 0;
 }
+.wm-topbar .timer :global(svg) { color: var(--text-3); }
 .wm-topbar .icon-btn {
   width: 30px;
   height: 30px;
@@ -276,6 +309,8 @@ html, body {
   line-height: 1.5;
   word-wrap: break-word;
   overflow-wrap: anywhere;
+  /* Preserve newlines from multi-line text input (Shift+Enter). */
+  white-space: pre-wrap;
   box-shadow: var(--shadow-1);
 }
 .wm-bubble.self {
@@ -331,8 +366,12 @@ html, body {
   font-size: 14px;
   line-height: 1.45;
   max-height: 120px;
-  min-height: 22px;
+  /* min-height matches the 32px send/attach buttons so a single line is
+   * vertically centered with align-items: flex-end below; multi-line text
+   * grows upward and the buttons stay anchored at the bottom. */
+  min-height: 32px;
   padding: 6px 4px;
+  overflow-y: auto;
 }
 .wm-composer .icon-btn {
   width: 32px;

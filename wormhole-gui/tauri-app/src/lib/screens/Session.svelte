@@ -11,6 +11,8 @@
 
   let timelineEl;
   let showCloseConfirm = false;
+  let elapsedSec = 0;
+  let tickHandle;
 
   // Auto-scroll on new messages. Subscribe explicitly instead of using a
   // `$:` block — referencing `timelineEl` (bind:this) inside a reactive
@@ -23,8 +25,16 @@
         if (timelineEl) timelineEl.scrollTop = timelineEl.scrollHeight;
       });
     });
+    const start = Date.now();
+    tickHandle = setInterval(() => {
+      const next = Math.floor((Date.now() - start) / 1000);
+      if (next !== elapsedSec) elapsedSec = next;
+    }, 1000);
   });
-  onDestroy(() => { if (unsubMessages) unsubMessages(); });
+  onDestroy(() => {
+    if (unsubMessages) unsubMessages();
+    if (tickHandle) clearInterval(tickHandle);
+  });
 
   async function onSend(text) { await sendText(text); }
 
@@ -56,7 +66,7 @@
 </script>
 
 <div class="wm-app">
-  <TopBar code={$code || ''} onClose={askClose} />
+  <TopBar code={$code || ''} {elapsedSec} onClose={askClose} />
   <div class="wm-timeline" bind:this={timelineEl}>
     {#each $messages as m (m.id)}
       {#if m.kind === 'system'}
@@ -72,14 +82,11 @@
     {/each}
   </div>
 
-  <div class="composer-shell">
-    <button class="attach-btn" title="发送文件 (Ctrl+O)" on:click={pickFile}>
-      <Icon name="paperclip" size={16} />
-    </button>
-    <div style="flex:1;">
-      <Composer onSend={onSend} placeholder={hasInProgress ? '输入消息（传输进行中）…' : '输入消息或拖入文件…'} />
-    </div>
-  </div>
+  <Composer
+    onSend={onSend}
+    onAttach={pickFile}
+    placeholder={hasInProgress ? '输入消息（传输进行中）…' : '输入消息或拖入文件…'}
+  />
 
   {#if showCloseConfirm}
     <div class="wm-modal-backdrop">
@@ -97,24 +104,4 @@
 
 <style>
   .wm-system :global(svg) { vertical-align: -1px; margin-right: 4px; }
-  .composer-shell {
-    display: flex;
-    align-items: stretch;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-  }
-  .attach-btn {
-    width: 44px;
-    border: 0;
-    background: transparent;
-    color: var(--text-3);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .attach-btn:hover { background: var(--surface-2); color: var(--text); }
-  /* The Composer already has its own border-top — hide it inside the shell. */
-  .composer-shell :global(.wm-composer) { border-top: 0; }
 </style>

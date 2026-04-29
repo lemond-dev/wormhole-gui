@@ -189,6 +189,9 @@ export async function startSend() {
 
 export async function startRecv(codeStr) {
   reset();
+  // Display the code in the session TopBar on the joiner side too — the
+  // backend's `session:code` event only fires for the allocator.
+  code.set(codeStr);
   appState.set('connecting');
   await invoke('start_session', { mode: 'recv', code: codeStr });
 }
