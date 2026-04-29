@@ -3,6 +3,7 @@
 
 mod bridge;
 mod commands;
+mod config;
 
 use tauri::Emitter;
 
@@ -15,6 +16,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(bridge::SessionState::new())
+        .manage(config::ConfigState::load())
         .invoke_handler(tauri::generate_handler![
             commands::start_session,
             commands::send_text,
@@ -26,6 +28,9 @@ pub fn run() {
             commands::end_and_close,
             commands::reveal_in_folder,
             commands::debug_log,
+            commands::get_config,
+            commands::set_config,
+            commands::pick_download_dir,
         ])
         .on_window_event(|window, event| {
             // Hand close intent to the FE so it can show the same confirm

@@ -33,5 +33,8 @@ async-channel.workspace = true
 # tokio is Tauri's async runtime; we need `time` for graceful-close delay.
 tokio = { version = "1", features = ["time"] }
 
+# %APPDATA% lookup for persistent config.
+dirs = "5"
+
 # magic-wormhole types we re-expose at the IPC boundary (Code parsing)
 magic-wormhole.workspace = true

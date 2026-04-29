@@ -174,7 +174,8 @@ fn small_file_transfer_round_trip() {
         }
         _ => unreachable!(),
     };
-    send_blocking(&join.cmd_tx, Cmd::AcceptFile { id: offer_id.clone() });
+    let save_dir = std::env::temp_dir().join("wh-it");
+    send_blocking(&join.cmd_tx, Cmd::AcceptFile { id: offer_id.clone(), save_dir });
 
     // Wait for FileDone on both sides.
     let alloc_done = wait_for(&alloc, Duration::from_secs(60), |e| matches!(e, Evt::FileDone { .. }));

@@ -238,3 +238,15 @@ export async function endAndCloseWindow() {
 export async function revealInFolder(path) {
   await invoke('reveal_in_folder', { path });
 }
+
+export async function getConfig() {
+  return await invoke('get_config');
+}
+
+export async function setConfig(newConfig) {
+  await invoke('set_config', { new_config: newConfig });
+}
+
+export async function pickDownloadDir() {
+  return await invoke('pick_download_dir');
+}

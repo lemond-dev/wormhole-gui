@@ -1,6 +1,7 @@
 //! Tauri IPC commands. Architecture §6.1.
 
 use crate::bridge::{start_event_pump, SessionState};
+use crate::config::{self, Config, ConfigState};
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -76,9 +77,14 @@ pub async fn send_file(state: State<'_, SessionState>, path: String) -> Result<(
 }
 
 #[tauri::command]
-pub async fn accept_file(state: State<'_, SessionState>, id: String) -> Result<(), String> {
+pub async fn accept_file(
+    state: State<'_, SessionState>,
+    config: State<'_, ConfigState>,
+    id: String,
+) -> Result<(), String> {
+    let save_dir = config.download_dir();
     cmd_tx(&state)?
-        .send(Cmd::AcceptFile { id })
+        .send(Cmd::AcceptFile { id, save_dir })
         .await
         .map_err(|_| "session thread closed".into())
 }
@@ -136,6 +142,35 @@ pub fn reveal_in_folder(path: String) -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("explorer: {e}"))?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_config(config: State<'_, ConfigState>) -> Config {
+    config.snapshot()
+}
+
+#[tauri::command]
+pub fn set_config(
+    config: State<'_, ConfigState>,
+    new_config: Config,
+) -> Result<(), String> {
+    config::save(&new_config).map_err(|e| format!("config save: {e}"))?;
+    config.replace(new_config);
+    Ok(())
+}
+
+/// Pick a directory using the OS file dialog. Returns None on cancel.
+#[tauri::command]
+pub async fn pick_download_dir(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.dialog().file().pick_folder(move |folder| {
+        let _ = tx.send(folder);
+    });
+    let folder = tokio::task::spawn_blocking(move || rx.recv().ok().flatten())
+        .await
+        .map_err(|e| format!("dialog: {e}"))?;
+    Ok(folder.map(|f| f.to_string()))
 }
 
 /// X-button path: end the session if any, give the mailbox 200ms to flush

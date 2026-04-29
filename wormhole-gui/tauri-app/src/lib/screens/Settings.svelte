@@ -1,15 +1,44 @@
 <script>
+  import { onMount } from 'svelte';
   import SimpleHeader from '../components/SimpleHeader.svelte';
   import { appState } from '../store.js';
+  import { getConfig, setConfig, pickDownloadDir } from '../ipc.js';
 
-  // v0.1: most settings are read-only display. Persisted settings + relay
-  // override come in v0.2.
-
-  // Constants mirror core/src/transfer.rs and core/src/storage.rs defaults.
+  // Read-only display of where the relays live; not configurable in v0.2.
   const MAILBOX_RELAY = 'ws://relay.magic-wormhole.io:4000/v1';
   const TRANSIT_RELAY = 'tcp:transit.magic-wormhole.io:4001';
-  const DOWNLOAD_DIR = '~/Downloads/Wormhole/';
   const VERSION = '0.1.0';
+
+  let config = null;
+  let saving = false;
+
+  onMount(async () => {
+    config = await getConfig();
+  });
+
+  async function chooseDir() {
+    const picked = await pickDownloadDir();
+    if (!picked) return;
+    config = { ...config, download_dir: picked };
+    await persist();
+  }
+
+  async function toggleAutoAccept(e) {
+    config = { ...config, auto_accept: e.currentTarget.checked };
+    await persist();
+  }
+
+  async function persist() {
+    if (!config || saving) return;
+    saving = true;
+    try {
+      await setConfig(config);
+    } catch (err) {
+      console.error('setConfig failed', err);
+    } finally {
+      saving = false;
+    }
+  }
 
   function back() {
     appState.set('idle');
@@ -20,53 +49,49 @@
   <SimpleHeader title="设置" onBack={back} showSettings={false} />
   <div class="wm-flowpage wm-settings" style="padding: 18px 22px; gap: 4px;">
 
-    <div class="field">
-      <label>默认下载目录</label>
-      <input value={DOWNLOAD_DIR} readonly />
-      <span class="hint">v0.1 暂不支持自定义；接收的文件会带上时间戳避免覆盖。</span>
-    </div>
-
-    <div class="field">
-      <label>自动接收</label>
-      <div class="seg">
-        <button class="on" disabled>始终询问</button>
-        <button disabled>{'< 10 MB 自动'}</button>
-        <button disabled>始终自动</button>
+    {#if config}
+      <div class="field">
+        <label>默认下载目录</label>
+        <div class="dir-row">
+          <input value={config.download_dir} readonly />
+          <button class="wm-btn" on:click={chooseDir} disabled={saving}>选择…</button>
+        </div>
+        <span class="hint">接收的文件会带时间戳避免覆盖。</span>
       </div>
-      <span class="hint">v0.1 始终弹确认。</span>
-    </div>
 
-    <div class="field">
-      <label>语言</label>
-      <input value="中文（简体）" readonly />
-    </div>
+      <div class="field">
+        <label>
+          <input type="checkbox" checked={config.auto_accept} on:change={toggleAutoAccept} disabled={saving} />
+          自动接收文件
+        </label>
+        <span class="hint">
+          开启后无需逐个点"接收"。可执行文件（.exe / .msi / .bat / .cmd / .com / .scr / .ps1）仍需手动确认。
+        </span>
+      </div>
 
-    <div class="field">
-      <label>短码字典</label>
-      <input value="PGP 英文词表" readonly />
-      <span class="hint">v0.1 跟随 magic-wormhole 默认；纯数字短码在 v0.2 加入。</span>
-    </div>
+      <div class="wm-divider"></div>
 
-    <div class="wm-divider"></div>
+      <div class="field">
+        <label>Mailbox relay</label>
+        <input value={MAILBOX_RELAY} readonly />
+      </div>
+      <div class="field">
+        <label>Transit relay</label>
+        <input value={TRANSIT_RELAY} readonly />
+        <span class="hint">v0.2 使用官方公共 relay。</span>
+      </div>
 
-    <div class="field">
-      <label>Mailbox relay</label>
-      <input value={MAILBOX_RELAY} readonly />
-    </div>
-    <div class="field">
-      <label>Transit relay</label>
-      <input value={TRANSIT_RELAY} readonly />
-      <span class="hint">v0.1 使用官方 relay；自定义在 v0.2 加入。</span>
-    </div>
+      <div class="wm-divider"></div>
 
-    <div class="wm-divider"></div>
-
-    <div class="version-row">
-      <span>Wormhole-GUI v{VERSION}</span>
-      <a href="https://github.com/lemond-dev/chat_one" target="_blank" rel="noopener">
-        GitHub ↗
-      </a>
-    </div>
+      <div class="version-row">
+        <span>Wormhole-GUI v{VERSION}</span>
+        <a href="https://github.com/lemond-dev/chat_one" target="_blank" rel="noopener">
+          GitHub ↗
+        </a>
+      </div>
+    {:else}
+      <div class="hint">加载中…</div>
+    {/if}
   </div>
 </div>
 
@@ -81,9 +106,13 @@
     font-size: 12px;
     color: var(--text-2);
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .wm-settings .field input,
-  .wm-settings .field select {
+  .wm-settings .field input[type="text"],
+  .wm-settings .field input:not([type]),
+  .wm-settings .field input[readonly] {
     appearance: none;
     border: 1px solid var(--border-strong);
     background: var(--surface);
@@ -98,30 +127,12 @@
     color: var(--text-2);
     background: var(--surface-2);
   }
-  .wm-settings .seg {
+  .wm-settings .dir-row {
     display: flex;
-    gap: 4px;
-    background: var(--surface-2);
-    padding: 3px;
-    border-radius: var(--r-sm);
+    gap: 6px;
   }
-  .wm-settings .seg button {
-    flex: 1;
-    border: 0;
-    background: transparent;
-    font: inherit;
-    font-size: 12px;
-    padding: 6px 8px;
-    border-radius: 4px;
-    cursor: not-allowed;
-    color: var(--text-2);
-  }
-  .wm-settings .seg button.on {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow-1);
-    font-weight: 500;
-  }
+  .wm-settings .dir-row input { flex: 1; min-width: 0; }
+  .wm-settings .dir-row .wm-btn { flex-shrink: 0; padding: 6px 12px; font-size: 12px; }
   .wm-divider {
     height: 1px;
     background: var(--border);

@@ -65,7 +65,9 @@ pub fn sanitize_filename(input: &str) -> String {
     result
 }
 
-/// Default download directory: `~/Downloads/Wormhole/`. Created on demand.
+/// Default download directory: `~/Downloads/Wormhole/`. Used by the host
+/// to seed Config; pure helper so the host doesn't need its own copy of
+/// the home-dir lookup.
 pub fn default_download_dir() -> PathBuf {
     if let Some(home) = dirs_home() {
         return home.join("Downloads").join("Wormhole");
@@ -73,12 +75,10 @@ pub fn default_download_dir() -> PathBuf {
     PathBuf::from(".")
 }
 
-/// Best-effort: pick a path inside `default_download_dir()` that doesn't
-/// already exist. If the chosen name collides, append `-1`, `-2`, … to the
-/// stem.
-pub fn pick_save_path(suggested: &str) -> PathBuf {
-    let dir = default_download_dir();
-    let _ = std::fs::create_dir_all(&dir);
+/// Best-effort: pick a path inside `dir` that doesn't already exist. If the
+/// chosen name collides, append `-1`, `-2`, … to the stem.
+pub fn pick_save_path(suggested: &str, dir: &std::path::Path) -> PathBuf {
+    let _ = std::fs::create_dir_all(dir);
     let safe = sanitize_filename(suggested);
     let candidate = dir.join(&safe);
     if !candidate.exists() {

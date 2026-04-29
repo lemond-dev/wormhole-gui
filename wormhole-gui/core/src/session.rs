@@ -35,7 +35,7 @@ pub enum Cmd {
     JoinCode(Code),
     SendText(String),
     SendFile { path: PathBuf },
-    AcceptFile { id: String },
+    AcceptFile { id: String, save_dir: PathBuf },
     RejectFile { id: String, reason: String },
     CancelFile { id: String },
     Close,
@@ -276,8 +276,8 @@ async fn handle_local_cmd(
         Cmd::SendFile { path } => {
             send_file_offer(path, wh, evt_tx, outgoing).await?;
         }
-        Cmd::AcceptFile { id } => {
-            accept_file(id, wh, evt_tx, outbox_tx, incoming).await?;
+        Cmd::AcceptFile { id, save_dir } => {
+            accept_file(id, save_dir, wh, evt_tx, outbox_tx, incoming).await?;
         }
         Cmd::RejectFile { id, reason } => {
             if incoming.remove(&id).is_some() {
@@ -500,6 +500,7 @@ async fn send_file_offer(
 
 async fn accept_file(
     id: String,
+    save_dir: PathBuf,
     wh: &mut Wormhole,
     evt_tx: &Sender<Evt>,
     outbox_tx: &Sender<AppMsg>,
@@ -520,7 +521,7 @@ async fn accept_file(
         abilities: our_abilities,
     }).await?;
 
-    let save_path = storage::pick_save_path(&pending.name);
+    let save_path = storage::pick_save_path(&pending.name, &save_dir);
     let total = pending.size;
     let their_hints = pending.their_hints.clone();
     let their_abilities = pending.their_abilities;
