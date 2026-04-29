@@ -154,10 +154,26 @@ pub async fn close_session(state: State<'_, SessionState>) -> Result<(), String>
 /// extend with `cfg(target_os = ...)` when adding macOS/Linux.
 #[tauri::command]
 pub fn reveal_in_folder(path: String) -> Result<(), String> {
-    std::process::Command::new("explorer")
-        .arg(format!("/select,{path}"))
-        .spawn()
-        .map_err(|e| format!("explorer: {e}"))?;
+    use std::os::windows::process::CommandExt;
+    let p = std::path::Path::new(&path);
+    if p.exists() {
+        // raw_arg bypasses Rust's automatic quoting so explorer can parse
+        // `/select,"<path>"` correctly even when <path> contains spaces or
+        // non-ASCII chars. Without this, explorer falls back to Documents.
+        std::process::Command::new("explorer")
+            .raw_arg(format!("/select,\"{}\"", path))
+            .spawn()
+            .map_err(|e| format!("explorer: {e}"))?;
+    } else if let Some(parent) = p.parent().filter(|d| d.exists()) {
+        // File was moved/deleted after download — open the parent directory
+        // instead of letting explorer fall back to Documents.
+        std::process::Command::new("explorer")
+            .arg(parent)
+            .spawn()
+            .map_err(|e| format!("explorer: {e}"))?;
+    } else {
+        return Err(format!("路径不存在: {path}"));
+    }
     Ok(())
 }
 
