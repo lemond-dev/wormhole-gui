@@ -15,15 +15,6 @@ import {
   reset,
 } from './store.js';
 
-// Mirror the FileCard danger heuristic so the auto-accept path makes the
-// same decision the user would in the manual flow.
-const DANGEROUS_EXTS = ['exe', 'msi', 'bat', 'cmd', 'com', 'scr', 'ps1'];
-
-function isDangerous(name, mime) {
-  const ext = (name || '').split('.').pop().toLowerCase();
-  return DANGEROUS_EXTS.includes(ext) || (mime || '').includes('msdownload');
-}
-
 /**
  * Decide which screen to switch to when the session closes. The reason string
  * is whatever the backend's CoreError::Display produced (or "ok").
@@ -123,11 +114,8 @@ export async function setupListeners() {
 
   // ── File transfer events ──
   unlistenFns.push(
-    await listen('msg:file_offer', async (e) => {
+    await listen('msg:file_offer', (e) => {
       const { id, name, size, mime } = e.payload;
-      let cfg = null;
-      try { cfg = await getConfig(); } catch {}
-      const auto = cfg?.auto_accept && !isDangerous(name, mime);
       pushMessage({
         kind: 'file',
         side: 'peer',
@@ -135,18 +123,11 @@ export async function setupListeners() {
         name,
         size,
         mime,
-        // Auto-accepted offers skip the 'offer' UI step entirely; we mark
-        // them as 'receiving' so the timeline never shows a green accept
-        // button the user can't un-press.
-        state: auto ? 'receiving' : 'offer',
+        state: 'offer',
         bytes: 0,
-        auto_accepted: !!auto,
+        auto_accepted: false,
         ts: Date.now(),
       });
-      if (auto) {
-        try { await acceptFile(id); }
-        catch (err) { console.error('auto acceptFile failed', err); }
-      }
     })
   );
 

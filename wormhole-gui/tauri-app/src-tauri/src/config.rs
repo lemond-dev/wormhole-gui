@@ -56,10 +56,14 @@ pub fn load() -> Config {
         Ok(b) => b,
         Err(_) => return Config::default(),
     };
-    serde_json::from_slice::<Config>(&bytes).unwrap_or_else(|e| {
+    let mut cfg = serde_json::from_slice::<Config>(&bytes).unwrap_or_else(|e| {
         tracing::warn!("config parse failed ({e}); using defaults");
         Config::default()
-    })
+    });
+    // Auto-accept is disabled in this build; scrub any leftover `true` from
+    // older config files at startup so nothing on the backend can read it.
+    cfg.auto_accept = false;
+    cfg
 }
 
 pub fn save(cfg: &Config) -> std::io::Result<()> {

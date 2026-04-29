@@ -63,11 +63,11 @@ pub async fn connect_transit(
     their_abilities: Abilities,
     their_hints: Hints,
 ) -> Result<Transit, CoreError> {
-    let (transit, info) = connector
+    let (transit, _info) = connector
         .connect(role, transit_key, their_abilities, Arc::new(their_hints))
         .await
         .map_err(|e| CoreError::Other(format!("transit connect: {e}")))?;
-    tracing::info!("transit established: {info:?}");
+    tracing::info!("transit established");
     Ok(transit)
 }
 

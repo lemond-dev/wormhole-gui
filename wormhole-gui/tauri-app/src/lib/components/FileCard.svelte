@@ -82,9 +82,7 @@
     </div>
   {:else if m.state === 'received'}
     <div class="actions">
-      <span class="sub" style="flex:1;">
-        已保存{#if m.auto_accepted}<span class="auto-tag">· 自动接收</span>{/if}
-      </span>
+      <span class="sub" style="flex:1;">已保存</span>
       <button
         class="wm-btn ghost"
         on:click={() => m.save_path && revealInFolder(m.save_path)}
@@ -124,9 +122,5 @@
     display: flex;
     gap: 6px;
     align-items: center;
-  }
-  .auto-tag {
-    color: var(--brand);
-    margin-left: 4px;
   }
 </style>

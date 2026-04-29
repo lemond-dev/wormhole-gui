@@ -167,7 +167,10 @@ pub fn get_config(config: State<'_, ConfigState>) -> Config {
 }
 
 #[tauri::command]
-pub fn set_config(config: State<'_, ConfigState>, new_config: Config) -> Result<(), String> {
+pub fn set_config(config: State<'_, ConfigState>, mut new_config: Config) -> Result<(), String> {
+    // Auto-accept is disabled in this build regardless of frontend / on-disk
+    // value — defense in depth against a tampered config.json or bypassed UI.
+    new_config.auto_accept = false;
     config::save(&new_config).map_err(|e| format!("config save: {e}"))?;
     config.replace(new_config);
     Ok(())

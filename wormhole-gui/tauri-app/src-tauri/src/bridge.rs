@@ -44,9 +44,27 @@ fn dir_str(d: Direction) -> &'static str {
     }
 }
 
+fn evt_kind(evt: &Evt) -> &'static str {
+    match evt {
+        Evt::Code(_) => "code",
+        Evt::Connected => "connected",
+        Evt::TextReceived { .. } => "text_received",
+        Evt::TextSent { .. } => "text_sent",
+        Evt::FileOffer { .. } => "file_offer",
+        Evt::FileOfferSent { .. } => "file_offer_sent",
+        Evt::FileAccepted { .. } => "file_accepted",
+        Evt::FileProgress { .. } => "file_progress",
+        Evt::FileDone { .. } => "file_done",
+        Evt::FileCancelled { .. } => "file_cancelled",
+        Evt::FileError { .. } => "file_error",
+        Evt::Closed { .. } => "closed",
+        Evt::Error { .. } => "error",
+    }
+}
+
 fn emit_evt(app: &AppHandle, evt: Evt) -> tauri::Result<()> {
     use serde_json::json;
-    tracing::debug!("emit_evt: {evt:?}");
+    tracing::debug!("emit_evt kind={}", evt_kind(&evt));
     match evt {
         Evt::Code(code) => app.emit("session:code", json!({ "code": code })),
         Evt::Connected => app.emit("session:connected", json!({})),

@@ -7,7 +7,7 @@
   // Read-only display of where the relays live; not configurable in v0.2.
   const MAILBOX_RELAY = 'ws://relay.magic-wormhole.io:4000/v1';
   const TRANSIT_RELAY = 'tcp:transit.magic-wormhole.io:4001';
-  const VERSION = '0.2.1';
+  const VERSION = '0.2.2';
 
   let config = null;
   let saving = false;
@@ -20,11 +20,6 @@
     const picked = await pickDownloadDir();
     if (!picked) return;
     config = { ...config, download_dir: picked };
-    await persist();
-  }
-
-  async function toggleAutoAccept(e) {
-    config = { ...config, auto_accept: e.currentTarget.checked };
     await persist();
   }
 
@@ -66,11 +61,11 @@
 
       <div class="field">
         <label>
-          <input type="checkbox" checked={config.auto_accept} on:change={toggleAutoAccept} disabled={saving} />
+          <input type="checkbox" checked={false} disabled={true} />
           自动接收文件
         </label>
         <span class="hint">
-          开启后无需逐个点"接收"。可执行文件（.exe / .msi / .bat / .cmd / .com / .scr / .ps1）仍需手动确认。
+          暂时禁用 — 当前版本统一使用人工确认，避免恶意载体（.lnk / .hta / .iso / 宏文档等）自动落盘。
         </span>
       </div>
 

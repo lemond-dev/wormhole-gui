@@ -55,9 +55,7 @@ pub fn run() {
 fn init_tracing() {
     use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        EnvFilter::new("info,wormhole_gui_core=debug,wormhole_gui_tauri_lib=debug")
-    });
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     let log_dir = std::env::temp_dir();
     let pid = std::process::id();
