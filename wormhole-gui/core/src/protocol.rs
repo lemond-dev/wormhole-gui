@@ -28,7 +28,12 @@ pub const MAX_MAILBOX_PAYLOAD: usize = 1024 * 1024;
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AppMsg {
     // ─── Chat ───
-    Text { v: u32, id: String, content: String, ts: u64 },
+    Text {
+        v: u32,
+        id: String,
+        content: String,
+        ts: u64,
+    },
 
     // ─── File transfer (transit hints inlined) ───
     FileOffer {
@@ -46,13 +51,28 @@ pub enum AppMsg {
         hints: Hints,
         abilities: Abilities,
     },
-    FileReject { v: u32, id: String, reason: String },
-    FileCancel { v: u32, id: String },
-    FileDone { v: u32, id: String, ok: bool },
+    FileReject {
+        v: u32,
+        id: String,
+        reason: String,
+    },
+    FileCancel {
+        v: u32,
+        id: String,
+    },
+    FileDone {
+        v: u32,
+        id: String,
+        ok: bool,
+    },
 
     // ─── Misc ───
-    Ping { v: u32 },
-    Bye { v: u32 },
+    Ping {
+        v: u32,
+    },
+    Bye {
+        v: u32,
+    },
 }
 
 impl AppMsg {

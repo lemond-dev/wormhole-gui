@@ -14,10 +14,7 @@ use std::path::PathBuf;
 /// - Cap length to 200 characters (Windows MAX_PATH wiggle room)
 pub fn sanitize_filename(input: &str) -> String {
     // Take only the last path segment.
-    let last_segment = input
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or("");
+    let last_segment = input.rsplit(['/', '\\']).next().unwrap_or("");
 
     let mut out = String::with_capacity(last_segment.len());
     for c in last_segment.chars() {
@@ -40,20 +37,11 @@ pub fn sanitize_filename(input: &str) -> String {
     };
 
     // Windows reserved device names — block if the *stem* matches.
-    let stem = result
-        .split('.')
-        .next()
-        .unwrap_or("")
-        .to_ascii_uppercase();
-    let reserved = matches!(
-        stem.as_str(),
-        "CON" | "PRN" | "AUX" | "NUL"
-    ) || (stem.starts_with("COM") || stem.starts_with("LPT"))
-        && stem
-            .chars()
-            .skip(3)
-            .all(|c| c.is_ascii_digit())
-        && stem.len() > 3;
+    let stem = result.split('.').next().unwrap_or("").to_ascii_uppercase();
+    let reserved = matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || (stem.starts_with("COM") || stem.starts_with("LPT"))
+            && stem.chars().skip(3).all(|c| c.is_ascii_digit())
+            && stem.len() > 3;
     if reserved {
         result.insert(0, '_');
     }

@@ -45,8 +45,16 @@ pub enum Cmd {
 pub enum Evt {
     Code(String),
     Connected,
-    TextReceived { id: String, content: String, ts: u64 },
-    TextSent { id: String, content: String, ts: u64 },
+    TextReceived {
+        id: String,
+        content: String,
+        ts: u64,
+    },
+    TextSent {
+        id: String,
+        content: String,
+        ts: u64,
+    },
     /// Peer sent us a file offer.
     FileOffer {
         id: String,
@@ -61,7 +69,9 @@ pub enum Evt {
         size: u64,
     },
     /// Peer accepted our offer; transit started.
-    FileAccepted { id: String },
+    FileAccepted {
+        id: String,
+    },
     /// Streaming progress (in or out). `bytes` is cumulative.
     FileProgress {
         id: String,
@@ -77,18 +87,35 @@ pub enum Evt {
         save_path: Option<String>,
     },
     /// Transfer was cancelled by either side.
-    FileCancelled { id: String, by: Cancelled },
+    FileCancelled {
+        id: String,
+        by: Cancelled,
+    },
     /// Soft error specific to a file id (kept open).
-    FileError { id: String, message: String },
-    Closed { reason: String },
-    Error { code: String, message: String },
+    FileError {
+        id: String,
+        message: String,
+    },
+    Closed {
+        reason: String,
+    },
+    Error {
+        code: String,
+        message: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Direction { In, Out }
+pub enum Direction {
+    In,
+    Out,
+}
 
 #[derive(Debug, Clone, Copy)]
-pub enum Cancelled { Local, Peer }
+pub enum Cancelled {
+    Local,
+    Peer,
+}
 
 pub struct SessionHandle {
     pub cmd_tx: Sender<Cmd>,
@@ -264,13 +291,15 @@ async fn handle_local_cmd(
     match cmd {
         Cmd::SendText(content) => {
             if content.len() > MAX_MAILBOX_PAYLOAD / 2 {
-                let _ = evt_tx.send(Evt::Error {
-                    code: "text_too_long".into(),
-                    message: format!(
-                        "text exceeds {} bytes; not yet supported in v0.1",
-                        MAX_MAILBOX_PAYLOAD / 2
-                    ),
-                }).await;
+                let _ = evt_tx
+                    .send(Evt::Error {
+                        code: "text_too_long".into(),
+                        message: format!(
+                            "text exceeds {} bytes; not yet supported in v0.1",
+                            MAX_MAILBOX_PAYLOAD / 2
+                        ),
+                    })
+                    .await;
                 return Ok(());
             }
             let id = make_id();
@@ -292,12 +321,19 @@ async fn handle_local_cmd(
         }
         Cmd::RejectFile { id, reason } => {
             if incoming.remove(&id).is_some() {
-                let _ = wh.send_json(&AppMsg::FileReject {
-                    v: PROTOCOL_VERSION,
-                    id: id.clone(),
-                    reason,
-                }).await;
-                let _ = evt_tx.send(Evt::FileCancelled { id, by: Cancelled::Local }).await;
+                let _ = wh
+                    .send_json(&AppMsg::FileReject {
+                        v: PROTOCOL_VERSION,
+                        id: id.clone(),
+                        reason,
+                    })
+                    .await;
+                let _ = evt_tx
+                    .send(Evt::FileCancelled {
+                        id,
+                        by: Cancelled::Local,
+                    })
+                    .await;
             }
         }
         Cmd::CancelFile { id } => {
@@ -306,22 +342,36 @@ async fn handle_local_cmd(
                 if let Some(tx) = o.cancel_tx.take() {
                     let _ = tx.send(()).await;
                 }
-                let _ = wh.send_json(&AppMsg::FileCancel {
-                    v: PROTOCOL_VERSION,
-                    id: id.clone(),
-                }).await;
+                let _ = wh
+                    .send_json(&AppMsg::FileCancel {
+                        v: PROTOCOL_VERSION,
+                        id: id.clone(),
+                    })
+                    .await;
                 outgoing.remove(&id);
-                let _ = evt_tx.send(Evt::FileCancelled { id, by: Cancelled::Local }).await;
+                let _ = evt_tx
+                    .send(Evt::FileCancelled {
+                        id,
+                        by: Cancelled::Local,
+                    })
+                    .await;
             } else if let Some(i) = incoming.get_mut(&id) {
                 if let Some(tx) = i.cancel_tx.take() {
                     let _ = tx.send(()).await;
                 }
-                let _ = wh.send_json(&AppMsg::FileCancel {
-                    v: PROTOCOL_VERSION,
-                    id: id.clone(),
-                }).await;
+                let _ = wh
+                    .send_json(&AppMsg::FileCancel {
+                        v: PROTOCOL_VERSION,
+                        id: id.clone(),
+                    })
+                    .await;
                 incoming.remove(&id);
-                let _ = evt_tx.send(Evt::FileCancelled { id, by: Cancelled::Local }).await;
+                let _ = evt_tx
+                    .send(Evt::FileCancelled {
+                        id,
+                        by: Cancelled::Local,
+                    })
+                    .await;
             }
         }
         Cmd::Close => unreachable!(),
@@ -339,12 +389,22 @@ async fn handle_peer_msg(
     incoming: &mut HashMap<String, IncomingPending>,
 ) -> Result<(), CoreError> {
     match msg {
-        AppMsg::Text { id, content, ts, .. } => {
+        AppMsg::Text {
+            id, content, ts, ..
+        } => {
             let _ = evt_tx.send(Evt::TextReceived { id, content, ts }).await;
         }
         AppMsg::Ping { .. } | AppMsg::Bye { .. } => {}
 
-        AppMsg::FileOffer { id, name, size, mime, hints, abilities, .. } => {
+        AppMsg::FileOffer {
+            id,
+            name,
+            size,
+            mime,
+            hints,
+            abilities,
+            ..
+        } => {
             // Surface to UI; user picks accept or reject.
             incoming.insert(
                 id.clone(),
@@ -358,10 +418,22 @@ async fn handle_peer_msg(
                     cancel_tx: None,
                 },
             );
-            let _ = evt_tx.send(Evt::FileOffer { id, name, size, mime }).await;
+            let _ = evt_tx
+                .send(Evt::FileOffer {
+                    id,
+                    name,
+                    size,
+                    mime,
+                })
+                .await;
         }
 
-        AppMsg::FileAccept { id, hints: their_hints, abilities: their_abilities, .. } => {
+        AppMsg::FileAccept {
+            id,
+            hints: their_hints,
+            abilities: their_abilities,
+            ..
+        } => {
             // Peer accepted our outgoing offer; spawn the sender transit task.
             let pending = match outgoing.get_mut(&id) {
                 Some(p) => p,
@@ -391,38 +463,48 @@ async fn handle_peer_msg(
                     id_clone.clone(),
                     evt_tx2.clone(),
                     cancel_rx,
-                ).await;
+                )
+                .await;
                 match result {
                     Ok(()) => {
                         // Sender-side success is signaled to UI; the receiver will
                         // confirm with FileDone over mailbox.
-                        let _ = evt_tx2.send(Evt::FileProgress {
-                            id: id_clone.clone(),
-                            bytes: size,
-                            total: size,
-                            dir: Direction::Out,
-                        }).await;
+                        let _ = evt_tx2
+                            .send(Evt::FileProgress {
+                                id: id_clone.clone(),
+                                bytes: size,
+                                total: size,
+                                dir: Direction::Out,
+                            })
+                            .await;
                     }
                     Err(e) => {
-                        let _ = outbox_tx2.send(AppMsg::FileCancel {
-                            v: PROTOCOL_VERSION,
-                            id: id_clone.clone(),
-                        }).await;
-                        let _ = evt_tx2.send(Evt::FileError {
-                            id: id_clone,
-                            message: format!("{e}"),
-                        }).await;
+                        let _ = outbox_tx2
+                            .send(AppMsg::FileCancel {
+                                v: PROTOCOL_VERSION,
+                                id: id_clone.clone(),
+                            })
+                            .await;
+                        let _ = evt_tx2
+                            .send(Evt::FileError {
+                                id: id_clone,
+                                message: format!("{e}"),
+                            })
+                            .await;
                     }
                 }
-            }).detach();
+            })
+            .detach();
         }
 
         AppMsg::FileReject { id, reason, .. } => {
             outgoing.remove(&id);
-            let _ = evt_tx.send(Evt::FileError {
-                id,
-                message: format!("对方拒绝: {reason}"),
-            }).await;
+            let _ = evt_tx
+                .send(Evt::FileError {
+                    id,
+                    message: format!("对方拒绝: {reason}"),
+                })
+                .await;
         }
 
         AppMsg::FileCancel { id, .. } => {
@@ -438,18 +520,25 @@ async fn handle_peer_msg(
                 }
                 incoming.remove(&id);
             }
-            let _ = evt_tx.send(Evt::FileCancelled { id, by: Cancelled::Peer }).await;
+            let _ = evt_tx
+                .send(Evt::FileCancelled {
+                    id,
+                    by: Cancelled::Peer,
+                })
+                .await;
         }
 
         AppMsg::FileDone { id, ok, .. } => {
             // Receiver confirmed completion of OUR outgoing transfer.
             outgoing.remove(&id);
-            let _ = evt_tx.send(Evt::FileDone {
-                id,
-                ok,
-                dir: Direction::Out,
-                save_path: None,
-            }).await;
+            let _ = evt_tx
+                .send(Evt::FileDone {
+                    id,
+                    ok,
+                    dir: Direction::Out,
+                    save_path: None,
+                })
+                .await;
         }
     }
     Ok(())
@@ -492,7 +581,8 @@ async fn send_file_offer(
         mime: mime.clone(),
         hints: our_hints,
         abilities: our_abilities,
-    }).await?;
+    })
+    .await?;
 
     outgoing.insert(
         id.clone(),
@@ -530,7 +620,8 @@ async fn accept_file(
         id: id.clone(),
         hints: our_hints,
         abilities: our_abilities,
-    }).await?;
+    })
+    .await?;
 
     let save_path = storage::pick_save_path(&pending.name, &save_dir);
     let total = pending.size;
@@ -554,34 +645,44 @@ async fn accept_file(
             id_clone.clone(),
             evt_tx2.clone(),
             cancel_rx,
-        ).await;
+        )
+        .await;
         match result {
             Ok(()) => {
                 // Notify peer that we wrote the file successfully.
-                let _ = outbox_tx2.send(AppMsg::FileDone {
-                    v: PROTOCOL_VERSION,
-                    id: id_clone.clone(),
-                    ok: true,
-                }).await;
-                let _ = evt_tx2.send(Evt::FileDone {
-                    id: id_clone,
-                    ok: true,
-                    dir: Direction::In,
-                    save_path: Some(save_path.to_string_lossy().to_string()),
-                }).await;
+                let _ = outbox_tx2
+                    .send(AppMsg::FileDone {
+                        v: PROTOCOL_VERSION,
+                        id: id_clone.clone(),
+                        ok: true,
+                    })
+                    .await;
+                let _ = evt_tx2
+                    .send(Evt::FileDone {
+                        id: id_clone,
+                        ok: true,
+                        dir: Direction::In,
+                        save_path: Some(save_path.to_string_lossy().to_string()),
+                    })
+                    .await;
             }
             Err(e) => {
-                let _ = outbox_tx2.send(AppMsg::FileCancel {
-                    v: PROTOCOL_VERSION,
-                    id: id_clone.clone(),
-                }).await;
-                let _ = evt_tx2.send(Evt::FileError {
-                    id: id_clone,
-                    message: format!("{e}"),
-                }).await;
+                let _ = outbox_tx2
+                    .send(AppMsg::FileCancel {
+                        v: PROTOCOL_VERSION,
+                        id: id_clone.clone(),
+                    })
+                    .await;
+                let _ = evt_tx2
+                    .send(Evt::FileError {
+                        id: id_clone,
+                        message: format!("{e}"),
+                    })
+                    .await;
             }
         }
-    }).detach();
+    })
+    .detach();
 
     Ok(())
 }
@@ -604,7 +705,8 @@ async fn run_send_task(
         transit_key,
         their_abilities,
         their_hints,
-    ).await?;
+    )
+    .await?;
     let id_for_progress = id.clone();
     let evt_tx2 = evt_tx.clone();
     transfer::stream_send(
@@ -621,7 +723,8 @@ async fn run_send_task(
             });
         },
         cancel_rx,
-    ).await
+    )
+    .await
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -642,7 +745,8 @@ async fn run_recv_task(
         transit_key,
         their_abilities,
         their_hints,
-    ).await?;
+    )
+    .await?;
     let id_for_progress = id.clone();
     let evt_tx2 = evt_tx.clone();
     transfer::stream_recv(
@@ -658,7 +762,8 @@ async fn run_recv_task(
             });
         },
         cancel_rx,
-    ).await
+    )
+    .await
 }
 
 // ============================================================
@@ -696,16 +801,19 @@ fn now_ms() -> u64 {
 /// just enough to flag executable types in the UI warning path.
 fn mime_guess(name: &str) -> Option<String> {
     let ext = name.rsplit('.').next()?.to_ascii_lowercase();
-    Some(match ext.as_str() {
-        "png" => "image/png",
-        "jpg" | "jpeg" => "image/jpeg",
-        "gif" => "image/gif",
-        "webp" => "image/webp",
-        "pdf" => "application/pdf",
-        "zip" => "application/zip",
-        "txt" | "md" | "log" => "text/plain",
-        "json" => "application/json",
-        "exe" | "msi" | "bat" | "cmd" | "com" | "scr" | "ps1" => "application/x-msdownload",
-        _ => return None,
-    }.into())
+    Some(
+        match ext.as_str() {
+            "png" => "image/png",
+            "jpg" | "jpeg" => "image/jpeg",
+            "gif" => "image/gif",
+            "webp" => "image/webp",
+            "pdf" => "application/pdf",
+            "zip" => "application/zip",
+            "txt" | "md" | "log" => "text/plain",
+            "json" => "application/json",
+            "exe" | "msi" | "bat" | "cmd" | "com" | "scr" | "ps1" => "application/x-msdownload",
+            _ => return None,
+        }
+        .into(),
+    )
 }

@@ -21,9 +21,7 @@ where
     let started = Instant::now();
     loop {
         if started.elapsed() > deadline {
-            panic!(
-                "wait_for: timed out after {deadline:?} without seeing the expected event"
-            );
+            panic!("wait_for: timed out after {deadline:?} without seeing the expected event");
         }
         let remaining = deadline - started.elapsed();
         let evt = handle
@@ -71,7 +69,9 @@ fn happy_path_allocator_joiner() {
     let join = spawn_session_thread(Role::Joiner, false);
 
     // 1. Allocator emits code; forward to joiner.
-    let code = match wait_for(&alloc, Duration::from_secs(15), |e| matches!(e, Evt::Code(_))) {
+    let code = match wait_for(&alloc, Duration::from_secs(15), |e| {
+        matches!(e, Evt::Code(_))
+    }) {
         Evt::Code(s) => s,
         _ => unreachable!(),
     };
@@ -80,27 +80,39 @@ fn happy_path_allocator_joiner() {
     send_blocking(&join.cmd_tx, Cmd::JoinCode(parsed));
 
     // 2. PAKE completes on both sides.
-    wait_for(&alloc, Duration::from_secs(20), |e| matches!(e, Evt::Connected));
-    wait_for(&join, Duration::from_secs(20), |e| matches!(e, Evt::Connected));
+    wait_for(&alloc, Duration::from_secs(20), |e| {
+        matches!(e, Evt::Connected)
+    });
+    wait_for(&join, Duration::from_secs(20), |e| {
+        matches!(e, Evt::Connected)
+    });
 
     // 3. Round-trip a text message both directions.
     send_blocking(&alloc.cmd_tx, Cmd::SendText("hello from allocator".into()));
-    let received = wait_for(&join, Duration::from_secs(10), |e| matches!(e, Evt::TextReceived { .. }));
+    let received = wait_for(&join, Duration::from_secs(10), |e| {
+        matches!(e, Evt::TextReceived { .. })
+    });
     if let Evt::TextReceived { content, .. } = received {
         assert_eq!(content, "hello from allocator");
     }
 
     send_blocking(&join.cmd_tx, Cmd::SendText("和你好 🌍".into()));
-    let received = wait_for(&alloc, Duration::from_secs(10), |e| matches!(e, Evt::TextReceived { .. }));
+    let received = wait_for(&alloc, Duration::from_secs(10), |e| {
+        matches!(e, Evt::TextReceived { .. })
+    });
     if let Evt::TextReceived { content, .. } = received {
         assert_eq!(content, "和你好 🌍");
     }
 
     // 5. Close.
     send_blocking(&alloc.cmd_tx, Cmd::Close);
-    wait_for(&alloc, Duration::from_secs(5), |e| matches!(e, Evt::Closed { .. }));
+    wait_for(&alloc, Duration::from_secs(5), |e| {
+        matches!(e, Evt::Closed { .. })
+    });
     // Joiner's session should also wind down because allocator sent Bye.
-    wait_for(&join, Duration::from_secs(5), |e| matches!(e, Evt::Closed { .. }));
+    wait_for(&join, Duration::from_secs(5), |e| {
+        matches!(e, Evt::Closed { .. })
+    });
 }
 
 #[test]
@@ -109,7 +121,9 @@ fn pake_failure_with_wrong_code() {
     let alloc = spawn_session_thread(Role::Allocator, false);
     let join = spawn_session_thread(Role::Joiner, false);
 
-    let code = match wait_for(&alloc, Duration::from_secs(15), |e| matches!(e, Evt::Code(_))) {
+    let code = match wait_for(&alloc, Duration::from_secs(15), |e| {
+        matches!(e, Evt::Code(_))
+    }) {
         Evt::Code(s) => s,
         _ => unreachable!(),
     };
@@ -121,14 +135,20 @@ fn pake_failure_with_wrong_code() {
     send_blocking(&join.cmd_tx, Cmd::JoinCode(bad));
 
     // Both sides should close with an error-like reason on PAKE failure.
-    let alloc_close = wait_for(&alloc, Duration::from_secs(20), |e| matches!(e, Evt::Closed { .. }));
-    let join_close = wait_for(&join, Duration::from_secs(20), |e| matches!(e, Evt::Closed { .. }));
+    let alloc_close = wait_for(&alloc, Duration::from_secs(20), |e| {
+        matches!(e, Evt::Closed { .. })
+    });
+    let join_close = wait_for(&join, Duration::from_secs(20), |e| {
+        matches!(e, Evt::Closed { .. })
+    });
     eprintln!("alloc_close = {alloc_close:?}");
     eprintln!("join_close  = {join_close:?}");
 
     if let Evt::Closed { reason } = alloc_close {
         assert!(
-            reason.to_lowercase().contains("pake") || reason.contains("失败") || reason.contains("attacker"),
+            reason.to_lowercase().contains("pake")
+                || reason.contains("失败")
+                || reason.contains("attacker"),
             "expected PAKE-failed close, got: {reason}"
         );
     }
@@ -143,7 +163,9 @@ fn small_file_transfer_round_trip() {
     let join = spawn_session_thread(Role::Joiner, false);
 
     // Bring both sides to Connected, same as happy_path.
-    let code = match wait_for(&alloc, Duration::from_secs(15), |e| matches!(e, Evt::Code(_))) {
+    let code = match wait_for(&alloc, Duration::from_secs(15), |e| {
+        matches!(e, Evt::Code(_))
+    }) {
         Evt::Code(s) => s,
         _ => unreachable!(),
     };
@@ -151,8 +173,12 @@ fn small_file_transfer_round_trip() {
         &join.cmd_tx,
         Cmd::JoinCode(magic_wormhole::Code::from_str(&code).unwrap()),
     );
-    wait_for(&alloc, Duration::from_secs(20), |e| matches!(e, Evt::Connected));
-    wait_for(&join, Duration::from_secs(20), |e| matches!(e, Evt::Connected));
+    wait_for(&alloc, Duration::from_secs(20), |e| {
+        matches!(e, Evt::Connected)
+    });
+    wait_for(&join, Duration::from_secs(20), |e| {
+        matches!(e, Evt::Connected)
+    });
 
     // Write a small temp file with deterministic content.
     let tmpdir = std::env::temp_dir().join(format!("wh-spike-{}", std::process::id()));
@@ -165,8 +191,15 @@ fn small_file_transfer_round_trip() {
     let expected_size = std::fs::metadata(&src_path).unwrap().len();
 
     // Allocator sends; joiner receives the offer and accepts.
-    send_blocking(&alloc.cmd_tx, Cmd::SendFile { path: src_path.clone() });
-    let offer_id = match wait_for(&join, Duration::from_secs(20), |e| matches!(e, Evt::FileOffer { .. })) {
+    send_blocking(
+        &alloc.cmd_tx,
+        Cmd::SendFile {
+            path: src_path.clone(),
+        },
+    );
+    let offer_id = match wait_for(&join, Duration::from_secs(20), |e| {
+        matches!(e, Evt::FileOffer { .. })
+    }) {
         Evt::FileOffer { id, name, size, .. } => {
             assert_eq!(name, "hello.txt");
             assert_eq!(size, expected_size);
@@ -175,14 +208,24 @@ fn small_file_transfer_round_trip() {
         _ => unreachable!(),
     };
     let save_dir = std::env::temp_dir().join("wh-it");
-    send_blocking(&join.cmd_tx, Cmd::AcceptFile { id: offer_id.clone(), save_dir });
+    send_blocking(
+        &join.cmd_tx,
+        Cmd::AcceptFile {
+            id: offer_id.clone(),
+            save_dir,
+        },
+    );
 
     // Wait for FileDone on both sides.
-    let alloc_done = wait_for(&alloc, Duration::from_secs(60), |e| matches!(e, Evt::FileDone { .. }));
+    let alloc_done = wait_for(&alloc, Duration::from_secs(60), |e| {
+        matches!(e, Evt::FileDone { .. })
+    });
     if let Evt::FileDone { ok, .. } = alloc_done {
         assert!(ok, "allocator should see ok=true on FileDone");
     }
-    let recv_path = match wait_for(&join, Duration::from_secs(60), |e| matches!(e, Evt::FileDone { .. })) {
+    let recv_path = match wait_for(&join, Duration::from_secs(60), |e| {
+        matches!(e, Evt::FileDone { .. })
+    }) {
         Evt::FileDone { ok, save_path, .. } => {
             assert!(ok);
             save_path.expect("receiver FileDone should carry a save_path")
@@ -200,6 +243,10 @@ fn small_file_transfer_round_trip() {
 
     // Close cleanly.
     send_blocking(&alloc.cmd_tx, Cmd::Close);
-    wait_for(&alloc, Duration::from_secs(5), |e| matches!(e, Evt::Closed { .. }));
-    wait_for(&join, Duration::from_secs(5), |e| matches!(e, Evt::Closed { .. }));
+    wait_for(&alloc, Duration::from_secs(5), |e| {
+        matches!(e, Evt::Closed { .. })
+    });
+    wait_for(&join, Duration::from_secs(5), |e| {
+        matches!(e, Evt::Closed { .. })
+    });
 }

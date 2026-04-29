@@ -13,7 +13,10 @@
 use crate::CoreError;
 use futures::io::{AsyncReadExt, AsyncWriteExt};
 use magic_wormhole::{
-    transit::{self, Abilities, Hints, RelayHint, Transit, TransitConnector, TransitKey, TransitRole, DirectHint},
+    transit::{
+        self, Abilities, DirectHint, Hints, RelayHint, Transit, TransitConnector, TransitKey,
+        TransitRole,
+    },
     AppID, Wormhole,
 };
 use std::path::Path;

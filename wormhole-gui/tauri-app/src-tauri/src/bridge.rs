@@ -58,7 +58,12 @@ fn emit_evt(app: &AppHandle, evt: Evt) -> tauri::Result<()> {
             "msg:text_sent",
             json!({ "id": id, "content": content, "ts": ts }),
         ),
-        Evt::FileOffer { id, name, size, mime } => app.emit(
+        Evt::FileOffer {
+            id,
+            name,
+            size,
+            mime,
+        } => app.emit(
             "msg:file_offer",
             json!({ "id": id, "name": name, "size": size, "mime": mime, "from": "peer" }),
         ),
@@ -67,11 +72,21 @@ fn emit_evt(app: &AppHandle, evt: Evt) -> tauri::Result<()> {
             json!({ "id": id, "name": name, "size": size }),
         ),
         Evt::FileAccepted { id } => app.emit("file:accepted", json!({ "id": id })),
-        Evt::FileProgress { id, bytes, total, dir } => app.emit(
+        Evt::FileProgress {
+            id,
+            bytes,
+            total,
+            dir,
+        } => app.emit(
             "file:progress",
             json!({ "id": id, "bytes": bytes, "total": total, "dir": dir_str(dir) }),
         ),
-        Evt::FileDone { id, ok, dir, save_path } => app.emit(
+        Evt::FileDone {
+            id,
+            ok,
+            dir,
+            save_path,
+        } => app.emit(
             "file:done",
             json!({ "id": id, "ok": ok, "dir": dir_str(dir), "save_path": save_path }),
         ),
@@ -82,16 +97,12 @@ fn emit_evt(app: &AppHandle, evt: Evt) -> tauri::Result<()> {
             };
             app.emit("file:cancelled", json!({ "id": id, "by": by_str }))
         }
-        Evt::FileError { id, message } => app.emit(
-            "file:error",
-            json!({ "id": id, "message": message }),
-        ),
-        Evt::Closed { reason } => {
-            app.emit("session:closed", json!({ "reason": reason }))
+        Evt::FileError { id, message } => {
+            app.emit("file:error", json!({ "id": id, "message": message }))
         }
-        Evt::Error { code, message } => app.emit(
-            "error",
-            json!({ "code": code, "message": message }),
-        ),
+        Evt::Closed { reason } => app.emit("session:closed", json!({ "reason": reason })),
+        Evt::Error { code, message } => {
+            app.emit("error", json!({ "code": code, "message": message }))
+        }
     }
 }

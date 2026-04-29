@@ -86,7 +86,9 @@ pub async fn send_text(state: State<'_, SessionState>, content: String) -> Resul
 #[tauri::command]
 pub async fn send_file(state: State<'_, SessionState>, path: String) -> Result<(), String> {
     cmd_tx(&state)?
-        .send(Cmd::SendFile { path: PathBuf::from(path) })
+        .send(Cmd::SendFile {
+            path: PathBuf::from(path),
+        })
         .await
         .map_err(|_| "session thread closed".into())
 }
@@ -165,10 +167,7 @@ pub fn get_config(config: State<'_, ConfigState>) -> Config {
 }
 
 #[tauri::command]
-pub fn set_config(
-    config: State<'_, ConfigState>,
-    new_config: Config,
-) -> Result<(), String> {
+pub fn set_config(config: State<'_, ConfigState>, new_config: Config) -> Result<(), String> {
     config::save(&new_config).map_err(|e| format!("config save: {e}"))?;
     config.replace(new_config);
     Ok(())
