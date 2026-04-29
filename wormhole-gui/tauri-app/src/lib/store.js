@@ -26,6 +26,10 @@ export const lastError = writable(null);
 // Reason of close (string)
 export const closeReason = writable(null);
 
+// Why the close-confirm modal is open: 'session' (log-out icon, keep window)
+// or 'window' (X button, also destroy window after end). null = modal closed.
+export const closeIntent = writable(null);
+
 // Timeline messages: array of
 //   { kind: 'system' | 'text' | 'file', side: 'self'|'peer', id, ... }
 //
@@ -57,5 +61,6 @@ export function reset() {
   code.set(null);
   lastError.set(null);
   closeReason.set(null);
+  closeIntent.set(null);
   messages.set([]);
 }

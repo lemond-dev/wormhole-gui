@@ -126,3 +126,22 @@ pub async fn close_session(state: State<'_, SessionState>) -> Result<(), String>
     }
     Ok(())
 }
+
+/// X-button path: end the session if any, give the mailbox 200ms to flush
+/// the Bye, then destroy the window so the OS sees the process exit.
+#[tauri::command]
+pub async fn end_and_close(
+    state: State<'_, SessionState>,
+    window: tauri::Window,
+) -> Result<(), String> {
+    let tx_opt = {
+        let mut guard = state.handle.lock().unwrap();
+        guard.take().map(|h| h.cmd_tx)
+    };
+    if let Some(tx) = tx_opt {
+        let _ = tx.send(Cmd::Close).await;
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    }
+    let _ = window.destroy();
+    Ok(())
+}

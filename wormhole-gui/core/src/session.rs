@@ -16,7 +16,13 @@ use magic_wormhole::{
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::time::SystemTime;
+use std::time::{Duration, Instant, SystemTime};
+
+/// App-level heartbeat over the mailbox: the magic-wormhole relay is pubsub —
+/// it doesn't tell us when a peer drops. We send Pings every HEARTBEAT_INTERVAL
+/// and declare the peer dead if nothing has been received within PEER_TIMEOUT.
+const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+const PEER_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Debug, Clone, Copy)]
 pub enum Role {
@@ -183,6 +189,7 @@ async fn run(
     let (outbox_tx, outbox_rx) = bounded::<AppMsg>(64);
     let mut outgoing: HashMap<String, OutgoingPending> = HashMap::new();
     let mut incoming: HashMap<String, IncomingPending> = HashMap::new();
+    let mut last_seen = Instant::now();
 
     loop {
         use futures::FutureExt;
@@ -204,6 +211,7 @@ async fn run(
                 }
             },
             inbound = wh.receive_json::<AppMsg>().fuse() => {
+                last_seen = Instant::now();
                 let msg = inbound??;
                 msg.check_version()?;
                 if matches!(msg, AppMsg::Bye { .. }) {
@@ -219,6 +227,12 @@ async fn run(
             outbound = outbox_rx.recv().fuse() => {
                 let m = outbound.map_err(|_| CoreError::ChannelClosed)?;
                 wh.send_json(&m).await?;
+            }
+            _ = smol::Timer::after(HEARTBEAT_INTERVAL).fuse() => {
+                if last_seen.elapsed() > PEER_TIMEOUT {
+                    return Err(CoreError::Other("对方失联（心跳超时）".into()));
+                }
+                let _ = wh.send_json(&AppMsg::Ping { v: PROTOCOL_VERSION }).await;
             }
         }
     }

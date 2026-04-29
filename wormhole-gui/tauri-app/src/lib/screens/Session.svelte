@@ -7,8 +7,8 @@
   import Bubble from '../components/Bubble.svelte';
   import Composer from '../components/Composer.svelte';
   import FileCard from '../components/FileCard.svelte';
-  import { code, messages } from '../store.js';
-  import { sendText, sendFile, closeSession } from '../ipc.js';
+  import { code, messages, closeIntent } from '../store.js';
+  import { sendText, sendFile, closeSession, endAndCloseWindow } from '../ipc.js';
 
   let timelineEl;
   let showCloseConfirm = false;
@@ -76,12 +76,28 @@
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
-  function askClose() { showCloseConfirm = true; }
-  async function confirmClose() {
-    showCloseConfirm = false;
-    await closeSession();
+  function askClose() {
+    closeIntent.set('session');
+    showCloseConfirm = true;
   }
-  function cancelClose() { showCloseConfirm = false; }
+  async function confirmClose() {
+    const intent = $closeIntent;
+    showCloseConfirm = false;
+    closeIntent.set(null);
+    if (intent === 'window') {
+      await endAndCloseWindow();
+    } else {
+      await closeSession();
+    }
+  }
+  function cancelClose() {
+    showCloseConfirm = false;
+    closeIntent.set(null);
+  }
+
+  // X-button entry: backend emits window:close_requested → ipc.js sets the
+  // intent → we mirror it to the modal flag here.
+  $: if ($closeIntent === 'window' && !showCloseConfirm) showCloseConfirm = true;
 
   $: hasInProgress = $messages.some(
     (m) => m.kind === 'file' && (m.state === 'sending' || m.state === 'receiving')
@@ -121,11 +137,13 @@
   {#if showCloseConfirm}
     <div class="wm-modal-backdrop">
       <div class="wm-modal">
-        <h3>结束本次会话？</h3>
+        <h3>{$closeIntent === 'window' ? '关闭窗口？' : '结束本次会话？'}</h3>
         <p>会话关闭后无法恢复，所有未完成的传输都会丢失。</p>
         <div class="actions">
           <button class="wm-btn ghost" style="flex:1;" on:click={cancelClose}>继续会话</button>
-          <button class="wm-btn danger" style="flex:1;" on:click={confirmClose}>结束会话</button>
+          <button class="wm-btn danger" style="flex:1;" on:click={confirmClose}>
+            {$closeIntent === 'window' ? '关闭窗口' : '结束会话'}
+          </button>
         </div>
       </div>
     </div>

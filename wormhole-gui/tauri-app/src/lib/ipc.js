@@ -9,6 +9,7 @@ import {
   code,
   lastError,
   closeReason,
+  closeIntent,
   pushMessage,
   updateMessage,
   reset,
@@ -98,6 +99,16 @@ export async function setupListeners() {
   unlistenFns.push(
     await listen('error', (e) => {
       lastError.set({ code: e.payload.code, message: e.payload.message });
+    })
+  );
+
+  unlistenFns.push(
+    await listen('window:close_requested', () => {
+      if (get(appState) === 'connected') {
+        closeIntent.set('window');
+      } else {
+        invoke('end_and_close');
+      }
     })
   );
 
@@ -218,4 +229,8 @@ export async function cancelFile(id) {
 
 export async function closeSession() {
   await invoke('close_session');
+}
+
+export async function endAndCloseWindow() {
+  await invoke('end_and_close');
 }

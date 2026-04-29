@@ -4,6 +4,8 @@
 mod bridge;
 mod commands;
 
+use tauri::Emitter;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     init_tracing();
@@ -21,8 +23,18 @@ pub fn run() {
             commands::reject_file,
             commands::cancel_file,
             commands::close_session,
+            commands::end_and_close,
             commands::debug_log,
         ])
+        .on_window_event(|window, event| {
+            // Hand close intent to the FE so it can show the same confirm
+            // modal the in-app log-out icon uses; FE then either calls
+            // end_and_close (X path) or close_session (log-out path).
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.emit("window:close_requested", ());
+            }
+        })
         .setup(|_app| {
             tracing::info!("Tauri setup complete");
             Ok(())

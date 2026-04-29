@@ -6183,6 +6183,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
+ "tokio",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
