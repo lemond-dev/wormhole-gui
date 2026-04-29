@@ -457,7 +457,7 @@ async fn send_file_offer(
     let metadata = smol::fs::metadata(&path).await?;
     if metadata.is_dir() {
         return Err(CoreError::Other(
-            "v0.1 does not support directories; pick a single file".into(),
+            "暂不支持发送文件夹，请逐个选择文件".into(),
         ));
     }
     let size = metadata.len();

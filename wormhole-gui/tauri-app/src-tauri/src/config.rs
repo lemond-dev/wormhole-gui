@@ -88,11 +88,6 @@ impl ConfigState {
     pub fn download_dir(&self) -> PathBuf {
         self.0.lock().unwrap().download_dir.clone()
     }
-    /// Used by Phase 10 to gate auto-accept of incoming offers.
-    #[allow(dead_code)]
-    pub fn auto_accept(&self) -> bool {
-        self.0.lock().unwrap().auto_accept
-    }
 }
 
 /// Filename helper kept here so callers don't need to import `Path`.

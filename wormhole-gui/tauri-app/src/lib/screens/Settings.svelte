@@ -7,7 +7,7 @@
   // Read-only display of where the relays live; not configurable in v0.2.
   const MAILBOX_RELAY = 'ws://relay.magic-wormhole.io:4000/v1';
   const TRANSIT_RELAY = 'tcp:transit.magic-wormhole.io:4001';
-  const VERSION = '0.1.0';
+  const VERSION = '0.2.0';
 
   let config = null;
   let saving = false;
