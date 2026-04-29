@@ -24,6 +24,7 @@ pub fn run() {
             commands::cancel_file,
             commands::close_session,
             commands::end_and_close,
+            commands::reveal_in_folder,
             commands::debug_log,
         ])
         .on_window_event(|window, event| {

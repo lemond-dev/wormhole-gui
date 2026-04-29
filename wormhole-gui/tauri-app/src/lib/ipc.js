@@ -234,3 +234,7 @@ export async function closeSession() {
 export async function endAndCloseWindow() {
   await invoke('end_and_close');
 }
+
+export async function revealInFolder(path) {
+  await invoke('reveal_in_folder', { path });
+}

@@ -127,6 +127,17 @@ pub async fn close_session(state: State<'_, SessionState>) -> Result<(), String>
     Ok(())
 }
 
+/// Open Windows Explorer with the given file selected. v0.1 is Windows-only;
+/// extend with `cfg(target_os = ...)` when adding macOS/Linux.
+#[tauri::command]
+pub fn reveal_in_folder(path: String) -> Result<(), String> {
+    std::process::Command::new("explorer")
+        .arg(format!("/select,{path}"))
+        .spawn()
+        .map_err(|e| format!("explorer: {e}"))?;
+    Ok(())
+}
+
 /// X-button path: end the session if any, give the mailbox 200ms to flush
 /// the Bye, then destroy the window so the OS sees the process exit.
 #[tauri::command]

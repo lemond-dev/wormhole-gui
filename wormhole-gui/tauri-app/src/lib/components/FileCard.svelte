@@ -1,6 +1,6 @@
 <script>
   import Icon from '../Icon.svelte';
-  import { acceptFile, rejectFile, cancelFile } from '../ipc.js';
+  import { acceptFile, rejectFile, cancelFile, revealInFolder } from '../ipc.js';
 
   /** Message object as stored in store.messages. */
   export let m;
@@ -83,6 +83,14 @@
   {:else if m.state === 'received'}
     <div class="actions">
       <span class="sub" style="flex:1;">已保存</span>
+      <button
+        class="wm-btn ghost"
+        on:click={() => m.save_path && revealInFolder(m.save_path)}
+        disabled={!m.save_path}
+        style="padding:4px 10px; font-size:12px; flex:0 0 auto;"
+      >
+        <Icon name="folder" size={12} /> 打开所在目录
+      </button>
     </div>
   {:else if m.state === 'sent'}
     <div style="font-size:12px; color:var(--brand-ink);">已送达</div>
