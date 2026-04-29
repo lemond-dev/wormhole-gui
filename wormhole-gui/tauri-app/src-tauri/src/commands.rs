@@ -60,14 +60,6 @@ pub async fn start_session(
 }
 
 #[tauri::command]
-pub async fn confirm_sas(state: State<'_, SessionState>, matches: bool) -> Result<(), String> {
-    cmd_tx(&state)?
-        .send(Cmd::ConfirmSas { matches })
-        .await
-        .map_err(|_| "session thread closed".into())
-}
-
-#[tauri::command]
 pub async fn send_text(state: State<'_, SessionState>, content: String) -> Result<(), String> {
     cmd_tx(&state)?
         .send(Cmd::SendText(content))
@@ -112,6 +104,15 @@ pub async fn cancel_file(state: State<'_, SessionState>, id: String) -> Result<(
         .send(Cmd::CancelFile { id })
         .await
         .map_err(|_| "session thread closed".into())
+}
+
+/// Diagnostic-only: lets the frontend write to the file log so we can
+/// confirm event delivery without DevTools. Newlines are escaped to keep
+/// log parsing line-oriented.
+#[tauri::command]
+pub fn debug_log(msg: String) {
+    let safe = msg.replace('\n', "\\n").replace('\r', "\\r");
+    tracing::info!("FE: {safe}");
 }
 
 #[tauri::command]

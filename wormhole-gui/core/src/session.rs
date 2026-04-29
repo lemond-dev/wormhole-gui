@@ -27,7 +27,6 @@ pub enum Role {
 #[derive(Debug)]
 pub enum Cmd {
     JoinCode(Code),
-    ConfirmSas { matches: bool },
     SendText(String),
     SendFile { path: PathBuf },
     AcceptFile { id: String },
@@ -39,7 +38,6 @@ pub enum Cmd {
 #[derive(Debug, Clone)]
 pub enum Evt {
     Code(String),
-    SasReady { sas: String },
     Connected,
     TextReceived { id: String, content: String, ts: u64 },
     TextSent { id: String, content: String, ts: u64 },
@@ -177,53 +175,8 @@ async fn run(
         }
     };
 
-    // ── SAS ──
-    let sas = derive_sas(&wh);
-    let _ = evt_tx.send(Evt::SasReady { sas }).await;
-
-    // ── SAS confirmation handshake ──
-    let mut local_ok = false;
-    let mut peer_ok = false;
-    while !(local_ok && peer_ok) {
-        use futures::FutureExt;
-        futures::select! {
-            cmd = cmd_rx.recv().fuse() => match cmd.map_err(|_| CoreError::ChannelClosed)? {
-                Cmd::ConfirmSas { matches: true } => {
-                    wh.send_json(&AppMsg::SasOk { v: PROTOCOL_VERSION }).await?;
-                    local_ok = true;
-                }
-                Cmd::ConfirmSas { matches: false } => {
-                    let _ = wh.send_json(&AppMsg::SasReject {
-                        v: PROTOCOL_VERSION,
-                        reason: "user_mismatch".into(),
-                    }).await;
-                    return Ok(());
-                }
-                Cmd::Close => return Ok(()),
-                other => {
-                    return Err(CoreError::Protocol(format!(
-                        "command {other:?} not allowed in SasPending"
-                    )));
-                }
-            },
-            inbound = wh.receive_json::<AppMsg>().fuse() => {
-                let msg = inbound??;
-                msg.check_version()?;
-                match msg {
-                    AppMsg::SasOk { .. } => peer_ok = true,
-                    AppMsg::SasReject { reason, .. } => {
-                        return Err(CoreError::Other(format!("peer rejected SAS: {reason}")));
-                    }
-                    other => {
-                        return Err(CoreError::Protocol(format!(
-                            "peer sent {other:?} before sas_ok"
-                        )));
-                    }
-                }
-            }
-        }
-    }
-
+    // PAKE's verifier is matched implicitly; v0.1 skips explicit SAS confirmation.
+    tracing::info!("PAKE done; skipping SAS handshake");
     let _ = evt_tx.send(Evt::Connected).await;
 
     // ── Connected event loop with file-transfer dispatch ──
@@ -347,9 +300,6 @@ async fn handle_local_cmd(
             }
         }
         Cmd::Close => unreachable!(),
-        Cmd::ConfirmSas { .. } => {
-            tracing::warn!("ConfirmSas in Connected state; ignored");
-        }
         Cmd::JoinCode(_) => return Err(CoreError::InvalidState),
     }
     Ok(())
@@ -368,7 +318,6 @@ async fn handle_peer_msg(
             let _ = evt_tx.send(Evt::TextReceived { id, content, ts }).await;
         }
         AppMsg::Ping { .. } | AppMsg::Bye { .. } => {}
-        AppMsg::SasOk { .. } | AppMsg::SasReject { .. } => {}
 
         AppMsg::FileOffer { id, name, size, mime, hints, abilities, .. } => {
             // Surface to UI; user picks accept or reject.
@@ -689,13 +638,6 @@ async fn run_recv_task(
 // ============================================================
 // Helpers
 // ============================================================
-
-fn derive_sas(wh: &Wormhole) -> String {
-    let v = wh.verifier();
-    let bytes = v.as_slice();
-    let n = u16::from_be_bytes([bytes[0], bytes[1]]);
-    format!("{:04}", n % 10000)
-}
 
 fn make_id() -> String {
     let n = SystemTime::now()

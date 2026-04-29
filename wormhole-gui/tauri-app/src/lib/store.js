@@ -10,8 +10,7 @@ import { writable, derived } from 'svelte/store';
  *   idle              → no session running
  *   allocator-wait    → code emitted, awaiting peer (PAKE pending)
  *   joiner-input      → user typing the peer's code
- *   connecting        → PAKE in progress (no SAS yet)
- *   sas               → SAS shown, awaiting both confirmations
+ *   connecting        → PAKE in progress
  *   connected         → full session
  *   error             → terminal error; show ErrorScreen
  *   closed            → graceful close; show return-to-idle prompt
@@ -20,12 +19,6 @@ export const appState = writable('idle');
 
 // Allocator code (full string, e.g. "26-dinosaur-spaniel")
 export const code = writable(null);
-
-// SAS digits (4-char string e.g. "1234")
-export const sas = writable(null);
-
-// Whether local user has confirmed SAS (UI-side); used to show waiting spinner.
-export const sasLocalConfirmed = writable(false);
 
 // Last error from backend ({ code, message })
 export const lastError = writable(null);
@@ -62,8 +55,6 @@ export function updateMessage(id, patch) {
 export function reset() {
   appState.set('idle');
   code.set(null);
-  sas.set(null);
-  sasLocalConfirmed.set(false);
   lastError.set(null);
   closeReason.set(null);
   messages.set([]);

@@ -1,8 +1,6 @@
 <script>
-  import { tick } from 'svelte';
+  import { tick, onMount, onDestroy } from 'svelte';
   import { open } from '@tauri-apps/plugin-dialog';
-  import { listen } from '@tauri-apps/api/event';
-  import { onMount, onDestroy } from 'svelte';
   import Icon from '../Icon.svelte';
   import TopBar from '../components/TopBar.svelte';
   import Bubble from '../components/Bubble.svelte';
@@ -13,34 +11,20 @@
 
   let timelineEl;
   let showCloseConfirm = false;
-  let showDrop = false;
-  let dropUnlistens = [];
 
-  $: if ($messages && timelineEl) {
-    tick().then(() => {
-      timelineEl.scrollTop = timelineEl.scrollHeight;
-    });
-  }
-
-  onMount(async () => {
-    // Tauri 2 emits webview drag-drop events through the window object.
-    try {
-      const u1 = await listen('tauri://drag-enter', () => { showDrop = true; });
-      const u2 = await listen('tauri://drag-over', () => { showDrop = true; });
-      const u3 = await listen('tauri://drag-leave', () => { showDrop = false; });
-      const u4 = await listen('tauri://drag-drop', async (e) => {
-        showDrop = false;
-        const paths = e.payload?.paths || [];
-        for (const p of paths) {
-          try { await sendFile(p); } catch (err) { console.error('sendFile', err); }
-        }
+  // Auto-scroll on new messages. Subscribe explicitly instead of using a
+  // `$:` block — referencing `timelineEl` (bind:this) inside a reactive
+  // block triggers infinite re-runs in Svelte 4 because safe_not_equal
+  // treats DOM refs as always-changing.
+  let unsubMessages;
+  onMount(() => {
+    unsubMessages = messages.subscribe(() => {
+      tick().then(() => {
+        if (timelineEl) timelineEl.scrollTop = timelineEl.scrollHeight;
       });
-      dropUnlistens = [u1, u2, u3, u4];
-    } catch (err) {
-      console.warn('drag-drop listeners unavailable', err);
-    }
+    });
   });
-  onDestroy(() => { dropUnlistens.forEach((u) => { try { u(); } catch {} }); });
+  onDestroy(() => { if (unsubMessages) unsubMessages(); });
 
   async function onSend(text) { await sendText(text); }
 
@@ -96,13 +80,6 @@
       <Composer onSend={onSend} placeholder={hasInProgress ? '输入消息（传输进行中）…' : '输入消息或拖入文件…'} />
     </div>
   </div>
-
-  {#if showDrop}
-    <div class="wm-drop-overlay">
-      <Icon name="download" size={28} stroke={1.6} />
-      <div>松手以发送</div>
-    </div>
-  {/if}
 
   {#if showCloseConfirm}
     <div class="wm-modal-backdrop">

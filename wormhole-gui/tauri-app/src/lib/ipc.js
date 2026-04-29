@@ -7,8 +7,6 @@ import { get } from 'svelte/store';
 import {
   appState,
   code,
-  sas,
-  sasLocalConfirmed,
   lastError,
   closeReason,
   pushMessage,
@@ -25,7 +23,6 @@ function pickClosedScreen(reason) {
   if (r === 'ok' || r === '') return 'closed';
   if (r.includes('pake')) return 'error';        // wrong code
   if (r.includes('rendezvous') || r.includes('io error') || r.includes('connection')) return 'error';
-  if (r.includes('user_mismatch') || r.includes('rejected sas')) return 'error';
   return 'error';
 }
 
@@ -44,13 +41,6 @@ export async function setupListeners() {
       code.set(e.payload.code);
       // First code event lands while we're in 'allocator-wait' (started send mode).
       appState.set('allocator-wait');
-    })
-  );
-
-  unlistenFns.push(
-    await listen('session:sas_ready', (e) => {
-      sas.set(e.payload.sas);
-      appState.set('sas');
     })
   );
 
@@ -201,11 +191,6 @@ export async function startRecv(codeStr) {
   reset();
   appState.set('connecting');
   await invoke('start_session', { mode: 'recv', code: codeStr });
-}
-
-export async function confirmSas(matches) {
-  if (matches) sasLocalConfirmed.set(true);
-  await invoke('confirm_sas', { matches });
 }
 
 export async function sendText(content) {

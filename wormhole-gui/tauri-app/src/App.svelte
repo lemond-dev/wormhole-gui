@@ -9,7 +9,6 @@
   import Allocator from './lib/screens/Allocator.svelte';
   import Joiner from './lib/screens/Joiner.svelte';
   import Connecting from './lib/screens/Connecting.svelte';
-  import Sas from './lib/screens/Sas.svelte';
   import Session from './lib/screens/Session.svelte';
   import ErrorScreen from './lib/screens/Error.svelte';
   import Closed from './lib/screens/Closed.svelte';
@@ -27,8 +26,6 @@
   <Joiner />
 {:else if $appState === 'connecting'}
   <Connecting />
-{:else if $appState === 'sas'}
-  <Sas />
 {:else if $appState === 'connected'}
   <Session />
 {:else if $appState === 'error'}

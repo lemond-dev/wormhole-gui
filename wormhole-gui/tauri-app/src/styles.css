@@ -666,25 +666,6 @@ html, body {
 .wm-card .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .wm-card .actions .wm-btn { flex: 1; }
 
-/* Drop overlay */
-.wm-drop-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(31, 122, 107, .08);
-  border: 2px dashed var(--brand);
-  border-radius: var(--r-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 8px;
-  color: var(--brand-ink);
-  font-weight: 500;
-  z-index: 10;
-  pointer-events: none;
-  backdrop-filter: blur(2px);
-}
-
 /* Util */
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .wm-row { display: flex; align-items: center; gap: 8px; }

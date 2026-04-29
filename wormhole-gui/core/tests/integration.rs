@@ -79,24 +79,11 @@ fn happy_path_allocator_joiner() {
     let parsed = magic_wormhole::Code::from_str(&code).expect("valid code");
     send_blocking(&join.cmd_tx, Cmd::JoinCode(parsed));
 
-    // 2. Both sides emit SasReady with the same digits.
-    let alloc_sas = match wait_for(&alloc, Duration::from_secs(20), |e| matches!(e, Evt::SasReady { .. })) {
-        Evt::SasReady { sas } => sas,
-        _ => unreachable!(),
-    };
-    let join_sas = match wait_for(&join, Duration::from_secs(20), |e| matches!(e, Evt::SasReady { .. })) {
-        Evt::SasReady { sas } => sas,
-        _ => unreachable!(),
-    };
-    assert_eq!(alloc_sas, join_sas, "verifier-derived SAS must match across sides");
+    // 2. PAKE completes on both sides.
+    wait_for(&alloc, Duration::from_secs(20), |e| matches!(e, Evt::Connected));
+    wait_for(&join, Duration::from_secs(20), |e| matches!(e, Evt::Connected));
 
-    // 3. Both confirm; expect Connected on both.
-    send_blocking(&alloc.cmd_tx, Cmd::ConfirmSas { matches: true });
-    send_blocking(&join.cmd_tx, Cmd::ConfirmSas { matches: true });
-    wait_for(&alloc, Duration::from_secs(10), |e| matches!(e, Evt::Connected));
-    wait_for(&join, Duration::from_secs(10), |e| matches!(e, Evt::Connected));
-
-    // 4. Round-trip a text message both directions.
+    // 3. Round-trip a text message both directions.
     send_blocking(&alloc.cmd_tx, Cmd::SendText("hello from allocator".into()));
     let received = wait_for(&join, Duration::from_secs(10), |e| matches!(e, Evt::TextReceived { .. }));
     if let Evt::TextReceived { content, .. } = received {
@@ -133,8 +120,7 @@ fn pake_failure_with_wrong_code() {
     let bad = magic_wormhole::Code::from_str(&bad_code_str).expect("syntactically valid");
     send_blocking(&join.cmd_tx, Cmd::JoinCode(bad));
 
-    // Both sides should close with an error-like reason; we just assert that
-    // neither reached SAS.
+    // Both sides should close with an error-like reason on PAKE failure.
     let alloc_close = wait_for(&alloc, Duration::from_secs(20), |e| matches!(e, Evt::Closed { .. }));
     let join_close = wait_for(&join, Duration::from_secs(20), |e| matches!(e, Evt::Closed { .. }));
     eprintln!("alloc_close = {alloc_close:?}");
@@ -165,12 +151,8 @@ fn small_file_transfer_round_trip() {
         &join.cmd_tx,
         Cmd::JoinCode(magic_wormhole::Code::from_str(&code).unwrap()),
     );
-    wait_for(&alloc, Duration::from_secs(20), |e| matches!(e, Evt::SasReady { .. }));
-    wait_for(&join, Duration::from_secs(20), |e| matches!(e, Evt::SasReady { .. }));
-    send_blocking(&alloc.cmd_tx, Cmd::ConfirmSas { matches: true });
-    send_blocking(&join.cmd_tx, Cmd::ConfirmSas { matches: true });
-    wait_for(&alloc, Duration::from_secs(10), |e| matches!(e, Evt::Connected));
-    wait_for(&join, Duration::from_secs(10), |e| matches!(e, Evt::Connected));
+    wait_for(&alloc, Duration::from_secs(20), |e| matches!(e, Evt::Connected));
+    wait_for(&join, Duration::from_secs(20), |e| matches!(e, Evt::Connected));
 
     // Write a small temp file with deterministic content.
     let tmpdir = std::env::temp_dir().join(format!("wh-spike-{}", std::process::id()));

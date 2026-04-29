@@ -27,10 +27,6 @@ pub const MAX_MAILBOX_PAYLOAD: usize = 1024 * 1024;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AppMsg {
-    // ─── Connection negotiation ───
-    SasOk { v: u32 },
-    SasReject { v: u32, reason: String },
-
     // ─── Chat ───
     Text { v: u32, id: String, content: String, ts: u64 },
 
@@ -62,9 +58,7 @@ pub enum AppMsg {
 impl AppMsg {
     pub fn version(&self) -> u32 {
         match self {
-            AppMsg::SasOk { v }
-            | AppMsg::SasReject { v, .. }
-            | AppMsg::Text { v, .. }
+            AppMsg::Text { v, .. }
             | AppMsg::FileOffer { v, .. }
             | AppMsg::FileAccept { v, .. }
             | AppMsg::FileReject { v, .. }

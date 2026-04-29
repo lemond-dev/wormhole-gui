@@ -37,9 +37,9 @@ fn dir_str(d: Direction) -> &'static str {
 
 fn emit_evt(app: &AppHandle, evt: Evt) -> tauri::Result<()> {
     use serde_json::json;
+    tracing::debug!("emit_evt: {evt:?}");
     match evt {
         Evt::Code(code) => app.emit("session:code", json!({ "code": code })),
-        Evt::SasReady { sas } => app.emit("session:sas_ready", json!({ "sas": sas })),
         Evt::Connected => app.emit("session:connected", json!({})),
         Evt::TextReceived { id, content, ts } => app.emit(
             "msg:text",
