@@ -8,6 +8,10 @@ repository.workspace = true
 
 [dependencies]
 magic-wormhole.workspace = true
+# Adds `async-native-tls` feature to async-tungstenite so magic_wormhole's
+# smol-based mailbox connection can do wss:// (the smol module gates TLS
+# on `feature = "async-native-tls"`, not on `smol-native-tls`).
+async-tungstenite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true

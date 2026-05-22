@@ -3,14 +3,15 @@ resolver = "2"
 members = ["core", "tauri-app/src-tauri"]
 
 [workspace.package]
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 license = "MIT"
 authors = ["lemon"]
 repository = "https://github.com/lemond-dev/chat_one"
 
 [workspace.dependencies]
-magic-wormhole = { version = "0.8", default-features = false, features = ["transit", "transfer"] }
+magic-wormhole = { version = "0.8", default-features = false, features = ["transit", "transfer", "native-tls"] }
+async-tungstenite = { version = "0.34", features = ["async-native-tls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"

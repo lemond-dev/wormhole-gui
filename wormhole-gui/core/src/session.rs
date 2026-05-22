@@ -129,11 +129,18 @@ pub fn spawn_session_thread(role: Role, numeric_code: bool) -> SessionHandle {
     let thread = std::thread::Builder::new()
         .name("wh-session".into())
         .spawn(move || {
+            tracing::info!("session thread started role={role:?} numeric={numeric_code}");
             smol::block_on(async move {
                 let result = run(role, numeric_code, cmd_rx, evt_tx.clone()).await;
                 let reason = match result {
-                    Ok(()) => "ok".to_string(),
-                    Err(e) => format!("{e}"),
+                    Ok(()) => {
+                        tracing::info!("session ended cleanly");
+                        "ok".to_string()
+                    }
+                    Err(ref e) => {
+                        tracing::error!("session ended with error: {e:?}");
+                        format!("{e}")
+                    }
                 };
                 let _ = evt_tx.send(Evt::Closed { reason }).await;
             });
@@ -184,25 +191,43 @@ async fn run(
     evt_tx: Sender<Evt>,
 ) -> Result<(), CoreError> {
     // ── PAKE ──
-    let cfg = mw_transfer::APP_CONFIG.clone();
+    let mut cfg = mw_transfer::APP_CONFIG.clone();
+    cfg.rendezvous_url = std::borrow::Cow::Borrowed("wss://relay.magic-wormhole.io/v1");
+    tracing::info!("connecting to relay: {}", cfg.rendezvous_url);
     let mut wh = match role {
         Role::Allocator => {
             let mc = if numeric_code {
                 let pw = generate_numeric_password(6);
+                tracing::info!("allocator: creating mailbox with numeric password");
                 // SAFETY: zxcvbn would reject 6-digit passwords, but our 5-min
                 // TTL (Allocator screen) + 15s heartbeat already gate brute-force
                 // attempts well below the 1M-combo space.
                 #[allow(unsafe_code)]
                 let password = unsafe { magic_wormhole::Password::new_unchecked(pw) };
-                MailboxConnection::create_with_password(cfg, password).await?
+                MailboxConnection::create_with_password(cfg, password).await.map_err(|e| {
+                    tracing::error!("MailboxConnection::create_with_password failed: {e:?}");
+                    e
+                })?
             } else {
-                MailboxConnection::create(cfg, 2).await?
+                tracing::info!("allocator: creating mailbox (wordlist code)");
+                MailboxConnection::create(cfg, 2).await.map_err(|e| {
+                    tracing::error!("MailboxConnection::create failed: {e:?}");
+                    e
+                })?
             };
             let code = mc.code().to_string();
+            tracing::info!("allocator: mailbox created, code={code}");
             let _ = evt_tx.send(Evt::Code(code)).await;
-            Wormhole::connect(mc).await?
+            tracing::info!("allocator: waiting for peer (Wormhole::connect)");
+            let wh = Wormhole::connect(mc).await.map_err(|e| {
+                tracing::error!("Wormhole::connect (allocator) failed: {e:?}");
+                e
+            })?;
+            tracing::info!("allocator: peer connected, PAKE done");
+            wh
         }
         Role::Joiner => {
+            tracing::info!("joiner: waiting for JoinCode cmd");
             let code = match cmd_rx.recv().await.map_err(|_| CoreError::ChannelClosed)? {
                 Cmd::JoinCode(c) => c,
                 other => {
@@ -211,11 +236,21 @@ async fn run(
                     )))
                 }
             };
-            let mc = MailboxConnection::connect(cfg, code, true).await?;
-            Wormhole::connect(mc).await.map_err(|e| match e {
-                magic_wormhole::WormholeError::PakeFailed => CoreError::PakeFailed,
-                other => CoreError::Wormhole(other),
-            })?
+            tracing::info!("joiner: connecting to mailbox with code");
+            let mc = MailboxConnection::connect(cfg, code, true).await.map_err(|e| {
+                tracing::error!("MailboxConnection::connect failed: {e:?}");
+                e
+            })?;
+            tracing::info!("joiner: mailbox connected, running PAKE");
+            let wh = Wormhole::connect(mc).await.map_err(|e| {
+                tracing::error!("Wormhole::connect (joiner) failed: {e:?}");
+                match e {
+                    magic_wormhole::WormholeError::PakeFailed => CoreError::PakeFailed,
+                    other => CoreError::Wormhole(other),
+                }
+            })?;
+            tracing::info!("joiner: PAKE done");
+            wh
         }
     };
 
@@ -235,6 +270,7 @@ async fn run(
             cmd = cmd_rx.recv().fuse() => {
                 let c = cmd.map_err(|_| CoreError::ChannelClosed)?;
                 if matches!(c, Cmd::Close) {
+                    tracing::info!("close cmd received, sending Bye and shutting down");
                     let _ = wh.send_json(&AppMsg::Bye { v: PROTOCOL_VERSION }).await;
                     // Drop all in-flight cancel senders so transit tasks exit.
                     for (_, o) in outgoing.iter_mut() { o.cancel_tx = None; }
@@ -242,6 +278,7 @@ async fn run(
                     return Ok(());
                 }
                 if let Err(e) = handle_local_cmd(c, &mut wh, &evt_tx, &outbox_tx, &mut outgoing, &mut incoming).await {
+                    tracing::error!("handle_local_cmd error: {e:?}");
                     let _ = evt_tx.send(Evt::Error {
                         code: e.code().into(),
                         message: format!("{e}"),
@@ -256,6 +293,7 @@ async fn run(
                     return Ok(());
                 }
                 if let Err(e) = handle_peer_msg(msg, &wh, &evt_tx, &outbox_tx, &mut outgoing, &mut incoming).await {
+                    tracing::error!("handle_peer_msg error: {e:?}");
                     let _ = evt_tx.send(Evt::Error {
                         code: e.code().into(),
                         message: format!("{e}"),
@@ -268,8 +306,10 @@ async fn run(
             }
             _ = smol::Timer::after(HEARTBEAT_INTERVAL).fuse() => {
                 if last_seen.elapsed() > PEER_TIMEOUT {
+                    tracing::error!("peer timeout: no message in {:?}", PEER_TIMEOUT);
                     return Err(CoreError::Other("对方失联（心跳超时）".into()));
                 }
+                tracing::debug!("heartbeat ping");
                 let _ = wh.send_json(&AppMsg::Ping { v: PROTOCOL_VERSION }).await;
             }
         }
@@ -288,6 +328,7 @@ async fn handle_local_cmd(
     outgoing: &mut HashMap<String, OutgoingPending>,
     incoming: &mut HashMap<String, IncomingPending>,
 ) -> Result<(), CoreError> {
+    tracing::info!("local cmd: {:?}", std::mem::discriminant(&cmd));
     match cmd {
         Cmd::SendText(content) => {
             if content.len() > MAX_MAILBOX_PAYLOAD / 2 {
@@ -388,6 +429,7 @@ async fn handle_peer_msg(
     outgoing: &mut HashMap<String, OutgoingPending>,
     incoming: &mut HashMap<String, IncomingPending>,
 ) -> Result<(), CoreError> {
+    tracing::info!("peer msg: {:?}", std::mem::discriminant(&msg));
     match msg {
         AppMsg::Text {
             id, content, ts, ..
@@ -554,7 +596,11 @@ async fn send_file_offer(
     evt_tx: &Sender<Evt>,
     outgoing: &mut HashMap<String, OutgoingPending>,
 ) -> Result<(), CoreError> {
-    let metadata = smol::fs::metadata(&path).await?;
+    tracing::info!("send_file_offer: path={}", path.display());
+    let metadata = smol::fs::metadata(&path).await.map_err(|e| {
+        tracing::error!("metadata failed for {}: {e:?}", path.display());
+        e
+    })?;
     if metadata.is_dir() {
         return Err(CoreError::Other(
             "暂不支持发送文件夹，请逐个选择文件".into(),
@@ -567,8 +613,12 @@ async fn send_file_offer(
         .map(String::from)
         .unwrap_or_else(|| "file".into());
     let mime = mime_guess(&name);
+    tracing::info!("send_file_offer: name={name} size={size}");
 
-    let connector = transfer::init_connector().await?;
+    let connector = transfer::init_connector().await.map_err(|e| {
+        tracing::error!("init_connector (send) failed: {e:?}");
+        e
+    })?;
     let our_hints = transfer::our_hints(&connector);
     let our_abilities = transfer::our_abilities(&connector);
     let id = make_id();
@@ -607,11 +657,18 @@ async fn accept_file(
     outbox_tx: &Sender<AppMsg>,
     incoming: &mut HashMap<String, IncomingPending>,
 ) -> Result<(), CoreError> {
+    tracing::info!("accept_file: id={id} save_dir={}", save_dir.display());
     let pending = match incoming.get_mut(&id) {
         Some(p) => p,
-        None => return Ok(()),
+        None => {
+            tracing::warn!("accept_file: no pending transfer for id={id}");
+            return Ok(());
+        }
     };
-    let connector = transfer::init_connector().await?;
+    let connector = transfer::init_connector().await.map_err(|e| {
+        tracing::error!("init_connector (recv) failed: {e:?}");
+        e
+    })?;
     let our_hints = transfer::our_hints(&connector);
     let our_abilities = transfer::our_abilities(&connector);
 
@@ -699,6 +756,7 @@ async fn run_send_task(
     evt_tx: Sender<Evt>,
     cancel_rx: Receiver<()>,
 ) -> Result<(), CoreError> {
+    tracing::info!("run_send_task: id={id} size={size} connecting transit");
     let mut transit = transfer::connect_transit(
         connector,
         TransitRole::Leader,
@@ -706,7 +764,12 @@ async fn run_send_task(
         their_abilities,
         their_hints,
     )
-    .await?;
+    .await
+    .map_err(|e| {
+        tracing::error!("connect_transit (send) id={id} failed: {e:?}");
+        e
+    })?;
+    tracing::info!("run_send_task: id={id} transit connected, streaming");
     let id_for_progress = id.clone();
     let evt_tx2 = evt_tx.clone();
     transfer::stream_send(
@@ -739,6 +802,7 @@ async fn run_recv_task(
     evt_tx: Sender<Evt>,
     cancel_rx: Receiver<()>,
 ) -> Result<(), CoreError> {
+    tracing::info!("run_recv_task: id={id} size={size} connecting transit");
     let mut transit = transfer::connect_transit(
         connector,
         TransitRole::Follower,
@@ -746,7 +810,12 @@ async fn run_recv_task(
         their_abilities,
         their_hints,
     )
-    .await?;
+    .await
+    .map_err(|e| {
+        tracing::error!("connect_transit (recv) id={id} failed: {e:?}");
+        e
+    })?;
+    tracing::info!("run_recv_task: id={id} transit connected, streaming to {}", save_path.display());
     let id_for_progress = id.clone();
     let evt_tx2 = evt_tx.clone();
     transfer::stream_recv(
