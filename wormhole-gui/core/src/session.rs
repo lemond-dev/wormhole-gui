@@ -192,7 +192,7 @@ async fn run(
 ) -> Result<(), CoreError> {
     // ── PAKE ──
     let mut cfg = mw_transfer::APP_CONFIG.clone();
-    cfg.rendezvous_url = std::borrow::Cow::Borrowed("wss://relay.magic-wormhole.io/v1");
+    cfg.rendezvous_url = std::borrow::Cow::Borrowed("wss://mailbox.mw.leastauthority.com/v1");
     tracing::info!("connecting to relay: {}", cfg.rendezvous_url);
     let mut wh = match role {
         Role::Allocator => {

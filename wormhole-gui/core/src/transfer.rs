@@ -29,7 +29,7 @@ pub async fn init_connector() -> Result<TransitConnector, CoreError> {
     let abilities = Abilities::ALL;
     let relay = RelayHint::new(
         None,
-        [DirectHint::new("transit.magic-wormhole.io", 4001)],
+        [DirectHint::new("relay.mw.leastauthority.com", 4001)],
         [],
     );
     let connector = transit::init(abilities, None, vec![relay])

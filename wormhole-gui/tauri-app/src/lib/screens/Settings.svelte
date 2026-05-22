@@ -5,9 +5,9 @@
   import { getConfig, setConfig, pickDownloadDir } from '../ipc.js';
 
   // Read-only display of where the relays live; not configurable in v0.2.
-  const MAILBOX_RELAY = 'ws://relay.magic-wormhole.io:4000/v1';
-  const TRANSIT_RELAY = 'tcp:transit.magic-wormhole.io:4001';
-  const VERSION = '0.2.2';
+  const MAILBOX_RELAY = 'wss://mailbox.mw.leastauthority.com/v1';
+  const TRANSIT_RELAY = 'tcp:relay.mw.leastauthority.com:4001';
+  const VERSION = '0.2.5';
 
   let config = null;
   let saving = false;
