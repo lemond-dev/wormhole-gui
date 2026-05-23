@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>wormhole-gui — 端到端加密文件 / 文字传输</title>
+  <meta name="description" content="基于 magic-wormhole 协议的 Windows 桌面 GUI。端到端加密、双向消息、双向文件、纯本地、零账号。" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%97%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --brand: #0284c7;
+      --brand-dark: #0369a1;
+      --text: #0f172a;
+      --text-2: #475569;
+      --text-3: #94a3b8;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #f0f9ff 0%, var(--bg) 320px);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 64px 24px 80px;
+    }
+    .hero {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    h1 {
+      font-size: 44px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .tagline {
+      font-size: 17px;
+      color: var(--text-2);
+      margin: 0 0 6px;
+    }
+    .version {
+      font-size: 13px;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+      margin-top: 6px;
+      min-height: 1.2em;
+    }
+    .version a { color: inherit; text-decoration: none; }
+    .version a:hover { color: var(--brand); }
+    .downloads {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 36px 0;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 120ms ease;
+      border: 1px solid transparent;
+    }
+    .btn-primary {
+      background: var(--brand);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--brand-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(2, 132, 199, 0.25);
+    }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover {
+      border-color: var(--brand);
+      color: var(--brand);
+    }
+    .btn .sub {
+      font-size: 11px;
+      color: var(--text-3);
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .btn-primary .sub { color: rgba(255, 255, 255, 0.75); }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin: 56px 0;
+    }
+    .feature {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 18px 16px;
+    }
+    .feature h3 {
+      margin: 0 0 6px;
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .feature p {
+      margin: 0;
+      font-size: 12.5px;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+    .feature .icon {
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+    .intro {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin: 32px 0;
+    }
+    .intro h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .intro p {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: var(--text-2);
+    }
+    .intro p:last-child { margin-bottom: 0; }
+    code {
+      background: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 0.92em;
+      font-family: "SF Mono", Consolas, monospace;
+    }
+    footer {
+      text-align: center;
+      margin-top: 64px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    footer a {
+      color: var(--text-2);
+      text-decoration: none;
+      margin: 0 10px;
+    }
+    footer a:hover { color: var(--brand); }
+    .smartscreen-note {
+      font-size: 12px;
+      color: var(--text-3);
+      text-align: center;
+      margin-top: -8px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 520px) {
+      main { padding: 40px 18px 56px; }
+      h1 { font-size: 34px; }
+      .downloads { flex-direction: column; align-items: stretch; }
+      .btn { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>wormhole-gui</h1>
+      <p class="tagline">端到端加密 · 双向文字 / 文件 · 零账号 · 纯本地</p>
+      <p class="version" id="version-line">
+        <span id="version-text">正在查询最新版本…</span>
+      </p>
+    </section>
+
+    <div class="downloads">
+      <a id="dl-installer" href="https://github.com/lemond-dev/wormhole-gui/releases/latest" class="btn btn-primary">
+        ⬇ 下载安装版
+        <span class="sub">推荐 · Windows</span>
+      </a>
+      <a id="dl-portable" href="https://github.com/lemond-dev/wormhole-gui/releases/latest" class="btn btn-secondary">
+        ⬇ 便携版
+        <span class="sub">单 exe · 免安装</span>
+      </a>
+    </div>
+    <p class="smartscreen-note">首次启动 SmartScreen 可能拦截 → 点 "更多信息 → 仍要运行"</p>
+
+    <section class="intro">
+      <h2>这是什么</h2>
+      <p>
+        基于 <a href="https://github.com/magic-wormhole/magic-wormhole.rs">magic-wormhole.rs</a>
+        的 Windows 桌面 GUI 工具。一方点 <strong>发送</strong> 得到一个短码（如 <code>15-123-456</code>），
+        通过电话或当面告诉另一方；另一方点 <strong>接收</strong> 输入短码就建立加密通道。
+      </p>
+      <p>
+        没有账号、没有手机号、没有联系人，关闭即销毁。
+        握手后双方可以发任意数量的文字和文件。
+      </p>
+    </section>
+
+    <section class="features">
+      <div class="feature">
+        <div class="icon">🔒</div>
+        <h3>端到端加密</h3>
+        <p>PAKE + NaCl SecretBox + Noise transit，全程在你和对方两台设备之间。</p>
+      </div>
+      <div class="feature">
+        <div class="icon">📁</div>
+        <h3>任意类型文件</h3>
+        <p>拖拽或选择，进行中可取消。可执行类文件红色二次确认。</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🌐</div>
+        <h3>自定义 relay</h3>
+        <p>默认 Least Authority 公共 relay；设置里可改成你自建的服务器。</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🔄</div>
+        <h3>自动更新</h3>
+        <p>v0.3.0 起内置。安装版静默升级，便携版引导覆盖。</p>
+      </div>
+    </section>
+
+    <footer>
+      <a href="https://github.com/lemond-dev/wormhole-gui">GitHub</a> ·
+      <a href="https://github.com/lemond-dev/wormhole-gui/releases">所有版本</a> ·
+      <a href="https://github.com/lemond-dev/wormhole-gui/blob/main/README.md">文档</a> ·
+      <a href="https://github.com/lemond-dev/wormhole-gui/blob/main/LICENSE">MIT 协议</a>
+    </footer>
+  </main>
+
+  <script>
+    // Fetch the same manifest the app uses, surface the current version
+    // and point the buttons directly at the right URLs. Falls back to
+    // /releases/latest if the manifest is unreachable.
+    fetch('./latest.json', { cache: 'no-cache' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
+      .then((m) => {
+        const versionText = document.getElementById('version-text');
+        const tag = 'v' + m.version;
+        versionText.innerHTML =
+          '最新版本 ' +
+          '<a href="https://github.com/lemond-dev/wormhole-gui/releases/tag/' +
+          tag +
+          '">' +
+          tag +
+          '</a>' +
+          (m.pub_date ? ' · ' + m.pub_date.slice(0, 10) : '');
+        const installer = m.platforms && m.platforms['windows-x86_64'];
+        const portable = m.platforms && m.platforms['windows-x86_64-portable'];
+        if (installer && installer.url) {
+          document.getElementById('dl-installer').href = installer.url;
+        }
+        if (portable && portable.url) {
+          document.getElementById('dl-portable').href = portable.url;
+        }
+      })
+      .catch(() => {
+        document.getElementById('version-text').textContent = '查询最新版本失败';
+      });
+  </script>
+</body>
+</html>
