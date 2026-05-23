@@ -1,0 +1,190 @@
+name: Release
+
+# Tag-triggered: pushing `v0.3.0`, `v0.3.1`, ... runs the full release.
+#
+# What this does:
+#   1. Builds the signed NSIS installer (`tauri build` honours
+#      `bundle.createUpdaterArtifacts` + `TAURI_SIGNING_PRIVATE_KEY` env)
+#   2. Separately signs the portable exe (`tauri signer sign` —
+#      `tauri build` only signs whatever it bundles, and the bundle is
+#      the NSIS installer, not the raw exe)
+#   3. Synthesizes `latest.json` referencing both artifacts so the
+#      `tauri-plugin-updater` (installed form) and our portable updater
+#      both find what they need at the same URL
+#   4. Creates a GitHub Release with all four files attached
+#   5. Pushes `latest.json` to the `gh-pages` branch so it's served at
+#      `https://lemond-dev.github.io/wormhole-gui/latest.json`
+#
+# Prerequisites (one-time setup, see RELEASE.md):
+#   - Repo Secret `TAURI_SIGNING_PRIVATE_KEY` (contents of
+#     ~/.tauri/wormhole-gui.key from Phase 4-B)
+#   - GitHub Pages enabled, source = gh-pages branch
+#   - GITHUB_TOKEN with `contents: write` (declared below)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, sign, and publish
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      # Hard-fail if the tag version doesn't match Cargo.toml. Without this
+      # check, mismatch produces artifacts whose filenames embed one
+      # version while the manifest URL references another — the updater
+      # would 404 silently.
+      - name: Verify version consistency
+        shell: pwsh
+        run: |
+          $tagVersion = '${{ steps.version.outputs.version }}'
+          $cargoToml = Get-Content wormhole-gui/Cargo.toml -Raw
+          if ($cargoToml -notmatch 'version\s*=\s*"([^"]+)"') {
+            throw 'could not find workspace version in wormhole-gui/Cargo.toml'
+          }
+          $cargoVersion = $matches[1]
+          if ($cargoVersion -ne $tagVersion) {
+            throw "tag v$tagVersion does not match Cargo.toml version $cargoVersion — bump version before tagging"
+          }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wormhole-gui
+
+      - name: Install frontend deps
+        working-directory: wormhole-gui/tauri-app
+        run: pnpm install --frozen-lockfile
+
+      # Builds the portable exe and the signed NSIS installer in one go.
+      # createUpdaterArtifacts in tauri.conf.json means the NSIS .sig file
+      # falls out of this step automatically; we still need a separate
+      # signing pass for the raw portable exe (next step).
+      - name: Build (signed NSIS)
+        working-directory: wormhole-gui/tauri-app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        run: pnpm tauri:build
+
+      # `tauri build` only signs what it bundles. The portable single-exe
+      # path our updater uses for non-installed deployments is NOT a
+      # bundle, so it doesn't get a .sig file unless we sign it
+      # explicitly here.
+      # Path is relative to tauri-app/, and target/ is at the cargo
+      # workspace root (one level up), not at the repo root.
+      # Key + password are picked up from the env vars below; --no-password
+      # is not a valid flag on `tauri signer sign`.
+      - name: Sign portable exe
+        working-directory: wormhole-gui/tauri-app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        shell: pwsh
+        run: |
+          pnpm tauri signer sign ../target/release/wormhole-gui.exe
+
+      # Discover the signed NSIS file name (it carries the version + arch
+      # in the name so we can't hard-code it).
+      - name: Locate artifacts
+        id: artifacts
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem 'wormhole-gui/target/release/bundle/nsis/wormhole-gui_*_x64-setup.exe' | Select-Object -First 1
+          if (-not $setup) { throw 'NSIS installer not found' }
+          $setupSig = "$($setup.FullName).sig"
+          if (-not (Test-Path $setupSig)) { throw "NSIS .sig not found at $setupSig" }
+          $portable = 'wormhole-gui/target/release/wormhole-gui.exe'
+          $portableSig = "$portable.sig"
+          if (-not (Test-Path $portableSig)) { throw "portable .sig not found at $portableSig" }
+          "setup_path=$($setup.FullName)" >> $env:GITHUB_OUTPUT
+          "setup_name=$($setup.Name)" >> $env:GITHUB_OUTPUT
+          "setup_sig_path=$setupSig" >> $env:GITHUB_OUTPUT
+          "portable_path=$portable" >> $env:GITHUB_OUTPUT
+          "portable_sig_path=$portableSig" >> $env:GITHUB_OUTPUT
+
+      # Build the manifest both updater paths read. Two platform keys:
+      #  - windows-x86_64: tauri-plugin-updater (NSIS installer)
+      #  - windows-x86_64-portable: our custom updater (raw exe)
+      - name: Generate latest.json
+        id: manifest
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $setupSig = (Get-Content '${{ steps.artifacts.outputs.setup_sig_path }}' -Raw).Trim()
+          $portableSig = (Get-Content '${{ steps.artifacts.outputs.portable_sig_path }}' -Raw).Trim()
+          $pubDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          # Try to pull release notes from the annotated tag message; fall
+          # back to a generic line if the tag was lightweight (no -m).
+          $notes = (git tag -l --format='%(contents:subject)' "v$version").Trim()
+          if (-not $notes) { $notes = "Release v$version" }
+          $manifest = [ordered]@{
+            version = $version
+            notes = $notes
+            pub_date = $pubDate
+            platforms = [ordered]@{
+              "windows-x86_64" = [ordered]@{
+                signature = $setupSig
+                url = "https://github.com/${{ github.repository }}/releases/download/v$version/${{ steps.artifacts.outputs.setup_name }}"
+              }
+              "windows-x86_64-portable" = [ordered]@{
+                signature = $portableSig
+                url = "https://github.com/${{ github.repository }}/releases/download/v$version/wormhole-gui.exe"
+              }
+            }
+          }
+          $json = $manifest | ConvertTo-Json -Depth 6
+          # gh-pages branch only needs latest.json at the root.
+          New-Item -ItemType Directory -Force -Path gh-pages-staging | Out-Null
+          $json | Out-File -Encoding utf8 -NoNewline gh-pages-staging/latest.json
+          Write-Output '--- latest.json ---'
+          Get-Content gh-pages-staging/latest.json
+          Write-Output ''
+          "notes=$notes" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ${{ steps.manifest.outputs.notes }}
+          files: |
+            ${{ steps.artifacts.outputs.portable_path }}
+            ${{ steps.artifacts.outputs.portable_sig_path }}
+            ${{ steps.artifacts.outputs.setup_path }}
+            ${{ steps.artifacts.outputs.setup_sig_path }}
+
+      # peaceiris/actions-gh-pages handles first-run branch creation
+      # automatically (orphan branch with just our staged files). On
+      # subsequent runs `keep_files: false` means latest.json is the only
+      # file kept — which is exactly what we want, no archive of old
+      # manifests.
+      - name: Publish manifest to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: gh-pages-staging
+          publish_branch: gh-pages
+          keep_files: false
+          force_orphan: false
+          commit_message: 'release: latest.json for ${{ github.ref_name }}'
