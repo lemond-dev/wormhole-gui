@@ -3,7 +3,7 @@
   import './styles.css';
 
   import { appState } from './lib/store.js';
-  import { setupListeners, teardownListeners } from './lib/ipc.js';
+  import { setupListeners, teardownListeners, triggerUpdateCheck } from './lib/ipc.js';
 
   import Idle from './lib/screens/Idle.svelte';
   import Allocator from './lib/screens/Allocator.svelte';
@@ -13,10 +13,25 @@
   import ErrorScreen from './lib/screens/Error.svelte';
   import Closed from './lib/screens/Closed.svelte';
   import Settings from './lib/screens/Settings.svelte';
+  import UpdateBanner from './lib/components/UpdateBanner.svelte';
 
-  onMount(setupListeners);
-  onDestroy(teardownListeners);
+  // 2-second delay so the initial paint completes before we hit the
+  // network — keeps cold-start feel snappy and avoids a network blip on
+  // the splash screen.
+  let updateCheckTimer = null;
+  onMount(() => {
+    setupListeners();
+    updateCheckTimer = setTimeout(() => {
+      triggerUpdateCheck({ silent: true });
+    }, 2000);
+  });
+  onDestroy(() => {
+    if (updateCheckTimer) clearTimeout(updateCheckTimer);
+    teardownListeners();
+  });
 </script>
+
+<UpdateBanner />
 
 {#if $appState === 'idle'}
   <Idle />

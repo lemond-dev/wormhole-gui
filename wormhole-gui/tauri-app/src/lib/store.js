@@ -64,3 +64,19 @@ export function reset() {
   closeIntent.set(null);
   messages.set([]);
 }
+
+// ───── Auto-update state ─────
+//
+// Single object store for the banner so the UI can branch on status:
+//   null                                                  → banner hidden
+//   { status: 'available', version, notes, pubDate, form } → "v0.x.y 可用"
+//   { status: 'downloading', downloaded, total, version } → progress bar
+//   { status: 'error', message, version? }                → error + retry
+//
+// `pubDate` is the manifest's pub_date string verbatim; the UI formats it.
+export const updateState = writable(null);
+
+// "稍后" was clicked this session — in-memory only, so the next launch
+// will prompt again. Acts as a guard against re-triggering checks from
+// the silent startup path or other code paths.
+export const updateDismissedThisSession = writable(false);

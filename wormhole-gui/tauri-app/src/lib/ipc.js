@@ -13,6 +13,8 @@ import {
   pushMessage,
   updateMessage,
   reset,
+  updateState,
+  updateDismissedThisSession,
 } from './store.js';
 
 /**
@@ -184,6 +186,19 @@ export async function setupListeners() {
       updateMessage(e.payload.id, { state: 'failed', error: e.payload.message });
     })
   );
+
+  // ── Updater progress ──
+  // The backend emits this roughly every 64 KiB during a download; we
+  // store the running totals and let the banner re-render reactively.
+  unlistenFns.push(
+    await listen('updater:progress', (e) => {
+      const { downloaded, total } = e.payload;
+      updateState.update((s) => {
+        if (!s || s.status !== 'downloading') return s;
+        return { ...s, downloaded, total };
+      });
+    })
+  );
 }
 
 export async function teardownListeners() {
@@ -253,4 +268,72 @@ export async function setConfig(newConfig) {
 
 export async function pickDownloadDir() {
   return await invoke('pick_download_dir');
+}
+
+// ───── Auto-update ─────
+//
+// `checkUpdate()` returns the same shape regardless of deployment form
+// (the backend dispatches by form). `null` means up-to-date.
+//
+// The returned object has: { version, notes, pubDate, form } where `form`
+// is "installed" or "portable" — the banner uses it only to phrase the
+// confirmation copy correctly.
+export async function checkUpdate() {
+  // Backend serializes the Rust struct field `pub_date` as snake_case;
+  // normalize to camelCase here so the UI doesn't have to know.
+  const raw = await invoke('check_update');
+  if (!raw) return null;
+  return {
+    version: raw.version,
+    notes: raw.notes,
+    pubDate: raw.pub_date,
+    form: raw.form,
+  };
+}
+
+/**
+ * Trigger the download + apply. Resolves only on error — on success the
+ * current process exits and the new version restarts the app, so the JS
+ * never gets to see the resolution.
+ */
+export async function applyUpdate() {
+  await invoke('apply_update');
+}
+
+/**
+ * Shared startup / manual update check. Updates `updateState` if a newer
+ * version is found; no-op otherwise.
+ *
+ * @param {{ silent?: boolean }} opts
+ *   silent=true  → swallow errors and skip if the user dismissed this
+ *                  session; used by the 2-second post-startup probe
+ *   silent=false → surface errors as an update-banner error and ignore
+ *                  the per-session dismissal flag; used by the Settings
+ *                  "检查更新" button
+ */
+export async function triggerUpdateCheck({ silent = false } = {}) {
+  if (silent && get(updateDismissedThisSession)) return;
+  // Don't start a second check if a banner / progress / error is already
+  // visible — that just confuses the user.
+  if (get(updateState)) return;
+  try {
+    const info = await checkUpdate();
+    if (info) {
+      updateState.set({
+        status: 'available',
+        version: info.version,
+        notes: info.notes,
+        pubDate: info.pubDate,
+        form: info.form,
+      });
+    }
+  } catch (err) {
+    if (!silent) {
+      updateState.set({
+        status: 'error',
+        message: `${err}`,
+      });
+    }
+    // Silent mode: swallow. The user can retry from Settings.
+  }
 }

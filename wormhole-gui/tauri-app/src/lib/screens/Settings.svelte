@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import SimpleHeader from '../components/SimpleHeader.svelte';
   import { appState } from '../store.js';
-  import { getConfig, setConfig, pickDownloadDir } from '../ipc.js';
+  import { getConfig, setConfig, pickDownloadDir, triggerUpdateCheck } from '../ipc.js';
+  import { updateState } from '../store.js';
 
   const DEFAULT_MAILBOX_RELAY = 'wss://mailbox.mw.leastauthority.com/v1';
   const DEFAULT_TRANSIT_RELAY = 'relay.mw.leastauthority.com:4001';
@@ -85,6 +86,30 @@
   function back() {
     appState.set('idle');
   }
+
+  // Manual update check. Routes through the shared helper so the banner
+  // (managed by App.svelte) renders any outcome — found / error.
+  // `silent: false` makes errors visible and bypasses the per-session
+  // dismissal so the user always gets feedback from a manual click.
+  let checking = false;
+  let manualNoUpdateAt = 0; // ms timestamp; drives the "已是最新" toast
+  async function onCheckUpdate() {
+    if (checking) return;
+    checking = true;
+    try {
+      const before = $updateState;
+      await triggerUpdateCheck({ silent: false });
+      // If state stayed null, no update was found → show the toast.
+      if (!$updateState && !before) {
+        manualNoUpdateAt = Date.now();
+      }
+    } finally {
+      checking = false;
+    }
+  }
+
+  $: showNoUpdateToast =
+    manualNoUpdateAt > 0 && Date.now() - manualNoUpdateAt < 3000;
 </script>
 
 <div class="wm-app">
@@ -155,7 +180,13 @@
 
       <div class="version-row">
         <span>wormhole-gui v{VERSION}</span>
+        <button class="wm-btn-link" on:click={onCheckUpdate} disabled={checking}>
+          {checking ? '检查中…' : '检查更新'}
+        </button>
       </div>
+      {#if showNoUpdateToast}
+        <div class="hint" style="text-align: right; color: var(--text-2);">已是最新版本</div>
+      {/if}
     {:else}
       <div class="hint">加载中…</div>
     {/if}
