@@ -1,15 +1,15 @@
 {
-  "version": "0.3.0",
-  "notes": "release: bump to v0.3.0",
-  "pub_date": "2026-05-23T04:49:26Z",
+  "version": "0.3.1",
+  "notes": "release: bump to v0.3.1 + close remaining i18n leaks",
+  "pub_date": "2026-05-23T06:13:12Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1ZNSUNnRkNGd0tFdUVwVjExcU4vVFdNRGJNT2lFS05Vejc4L2ZsOHhEYmhUTkhDNE4ybjRqUGUzU0F5VjNmbDl1VW1LWFZLb2FmWjhOWXZWTm5kUUJoUmVLZnlGdWdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5NTExNzYzCWZpbGU6d29ybWhvbGUtZ3VpXzAuMy4wX3g2NC1zZXR1cC5leGUKWFFHOW5xdFdlNENOTXgzL09LekdqbkNsR3FMd3g4RUNuM0w0anpZK2hNNEhmTkRsNUZhT29xak1QYkkvNXd2ZTA2VjBCT25oR2w0Zm9RWGl6MWpsQ1E9PQo=",
-      "url": "https://github.com/lemond-dev/wormhole-gui/releases/download/v0.3.0/wormhole-gui_0.3.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1ZNSUNnRkNGd0hkTDdmRGRXb1lnZFB3Sk9saTNRNG92a01sekIrSTNKSytNZ1JGNGVKUFpRMEZRWFNkT0VORzdxcklWay9VbFlRWDRxdW8wcFRYc3FlSkYvZGg0Z2dzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5NTE2NzkwCWZpbGU6d29ybWhvbGUtZ3VpXzAuMy4xX3g2NC1zZXR1cC5leGUKcVVPNkUwVUVrUTVJTWp5TFNWNjdobnZYbEVFYUFYSko3NEs5ZXdzTm4wb1RYa1F0TFJhdFVyaWRZU2NYdkIvS1loVlhCQmNuWXE2MGlVY3NETDhRQ3c9PQo=",
+      "url": "https://github.com/lemond-dev/wormhole-gui/releases/download/v0.3.1/wormhole-gui_0.3.1_x64-setup.exe"
     },
     "windows-x86_64-portable": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1ZNSUNnRkNGd0NoUEI4UkRaUkcrdGNzeDBJVkZZa01BTnpWdzRFVTAzK3FGV3BGeEVkQkFCUVBvQmxFUWZDZ1hUUG9hT3lSazE4aHZwN2JJdUdPMlBITzl0NFdFTndrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5NTExNzY1CWZpbGU6d29ybWhvbGUtZ3VpLmV4ZQpTUEovN2l3LzFzWEt4b0RIYWF5OXVnR1JSek9JWFF1WEMwU05PKzdqN0xFK1YxdVJMWHdZT3lzc0t4SU5oU1dtdGlNRGNnWjFHZEVXTTFiUlgwUGdCQT09Cg==",
-      "url": "https://github.com/lemond-dev/wormhole-gui/releases/download/v0.3.0/wormhole-gui.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1ZNSUNnRkNGd0lSakZhVVdzWU9HZ0JVYkF0RlNUWmZLYjZEREF4c2V4QjFkUmxUNEllUDh2ak8rVnhIRjAwcGR3L1N3dmNUdGxsQS9FbzBDKzBUczIyd0RxSWI2blFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5NTE2NzkxCWZpbGU6d29ybWhvbGUtZ3VpLmV4ZQpqRFB1amhUcTI1akxqNEd3bDE5MWtyZyt0TlBkNjBPVnJuNGMzZG9BRVI0TVpBZG14OWhpc29VbkZhcHBsbmxXaEk5eHJiTkN3ZGVSLzJ2dnM3UWFEdz09Cg==",
+      "url": "https://github.com/lemond-dev/wormhole-gui/releases/download/v0.3.1/wormhole-gui.exe"
     }
   }
 }
