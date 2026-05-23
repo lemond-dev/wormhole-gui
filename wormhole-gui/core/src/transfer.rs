@@ -51,15 +51,13 @@ pub async fn init_connector(transit_relay: &str) -> Result<TransitConnector, Cor
 pub fn parse_transit_relay(raw: &str) -> Result<(String, u16), CoreError> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
-        return Err(CoreError::Other("transit relay 为空".into()));
+        return Err(CoreError::TransitRelayEmpty);
     }
     // Reject schemes that belong to the mailbox field — the most common
     // user error is pasting the mailbox URL into the wrong box.
     for bad in ["ws://", "wss://", "http://", "https://"] {
         if trimmed.starts_with(bad) {
-            return Err(CoreError::Other(format!(
-                "transit relay 不应带 {bad} 前缀，应为 host:port 形式"
-            )));
+            return Err(CoreError::TransitRelayBadScheme(bad.to_string()));
         }
     }
     // Strip the only supported optional scheme.
@@ -72,21 +70,20 @@ pub fn parse_transit_relay(raw: &str) -> Result<(String, u16), CoreError> {
     let (host, port_str) = if let Some(rest) = s.strip_prefix('[') {
         let (addr, tail) = rest
             .rsplit_once(']')
-            .ok_or_else(|| CoreError::Other(format!("transit relay IPv6 缺少右括号: {raw}")))?;
+            .ok_or_else(|| CoreError::TransitRelayIpv6MissingBracket(raw.to_string()))?;
         let port_part = tail
             .strip_prefix(':')
-            .ok_or_else(|| CoreError::Other(format!("transit relay IPv6 缺少端口: {raw}")))?;
+            .ok_or_else(|| CoreError::TransitRelayIpv6MissingPort(raw.to_string()))?;
         (addr, port_part)
     } else {
-        s.rsplit_once(':').ok_or_else(|| {
-            CoreError::Other(format!("transit relay 格式错误 (应为 host:port): {raw}"))
-        })?
+        s.rsplit_once(':')
+            .ok_or_else(|| CoreError::TransitRelayBadFormat(raw.to_string()))?
     };
     let port = port_str
         .parse::<u16>()
-        .map_err(|_| CoreError::Other(format!("transit relay 端口无效: {port_str}")))?;
+        .map_err(|_| CoreError::TransitRelayBadPort(port_str.to_string()))?;
     if host.is_empty() {
-        return Err(CoreError::Other("transit relay host 为空".into()));
+        return Err(CoreError::TransitRelayHostEmpty);
     }
     Ok((host.to_string(), port))
 }

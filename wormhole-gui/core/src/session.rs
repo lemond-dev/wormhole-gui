@@ -142,14 +142,18 @@ pub struct SessionConfig {
 pub fn spawn_session_thread(role: Role, cfg: SessionConfig) -> SessionHandle {
     let (cmd_tx, cmd_rx) = bounded::<Cmd>(32);
     let (evt_tx, evt_rx) = bounded::<Evt>(128);
+    // Clone the language out before `cfg` is moved into `run` so the
+    // close-reason can be localised after run() returns.
+    let lang = cfg.language.clone();
     let thread = std::thread::Builder::new()
         .name("wh-session".into())
         .spawn(move || {
             tracing::info!(
-                "session thread started role={role:?} numeric={} mailbox={} transit={}",
+                "session thread started role={role:?} numeric={} mailbox={} transit={} lang={}",
                 cfg.numeric_code,
                 cfg.mailbox_relay,
-                cfg.transit_relay
+                cfg.transit_relay,
+                cfg.language,
             );
             smol::block_on(async move {
                 let result = run(role, cfg, cmd_rx, evt_tx.clone()).await;
@@ -160,7 +164,7 @@ pub fn spawn_session_thread(role: Role, cfg: SessionConfig) -> SessionHandle {
                     }
                     Err(ref e) => {
                         tracing::error!("session ended with error: {e:?}");
-                        format!("{e}")
+                        e.localize(&lang)
                     }
                 };
                 let _ = evt_tx.send(Evt::Closed { reason }).await;
@@ -216,6 +220,7 @@ async fn run(
     cfg.rendezvous_url = std::borrow::Cow::Owned(session_cfg.mailbox_relay.clone());
     let transit_relay = session_cfg.transit_relay.clone();
     let numeric_code = session_cfg.numeric_code;
+    let lang = session_cfg.language.clone();
     tracing::info!("connecting to relay: {}", cfg.rendezvous_url);
     let mut wh = match role {
         Role::Allocator => {
@@ -304,11 +309,11 @@ async fn run(
                     for (_, i) in incoming.iter_mut() { i.cancel_tx = None; }
                     return Ok(());
                 }
-                if let Err(e) = handle_local_cmd(c, &mut wh, &evt_tx, &outbox_tx, &mut outgoing, &mut incoming, &transit_relay).await {
+                if let Err(e) = handle_local_cmd(c, &mut wh, &evt_tx, &outbox_tx, &mut outgoing, &mut incoming, &transit_relay, &lang).await {
                     tracing::error!("handle_local_cmd error: {e:?}");
                     let _ = evt_tx.send(Evt::Error {
                         code: e.code().into(),
-                        message: format!("{e}"),
+                        message: e.localize(&lang),
                     }).await;
                 }
             },
@@ -319,11 +324,11 @@ async fn run(
                 if matches!(msg, AppMsg::Bye { .. }) {
                     return Ok(());
                 }
-                if let Err(e) = handle_peer_msg(msg, &wh, &evt_tx, &outbox_tx, &mut outgoing, &mut incoming).await {
+                if let Err(e) = handle_peer_msg(msg, &wh, &evt_tx, &outbox_tx, &mut outgoing, &mut incoming, &lang).await {
                     tracing::error!("handle_peer_msg error: {e:?}");
                     let _ = evt_tx.send(Evt::Error {
                         code: e.code().into(),
-                        message: format!("{e}"),
+                        message: e.localize(&lang),
                     }).await;
                 }
             },
@@ -334,7 +339,7 @@ async fn run(
             _ = smol::Timer::after(HEARTBEAT_INTERVAL).fuse() => {
                 if last_seen.elapsed() > PEER_TIMEOUT {
                     tracing::error!("peer timeout: no message in {:?}", PEER_TIMEOUT);
-                    return Err(CoreError::Other("对方失联（心跳超时）".into()));
+                    return Err(CoreError::PeerTimeout);
                 }
                 tracing::debug!("heartbeat ping");
                 let _ = wh.send_json(&AppMsg::Ping { v: PROTOCOL_VERSION }).await;
@@ -356,6 +361,7 @@ async fn handle_local_cmd(
     outgoing: &mut HashMap<String, OutgoingPending>,
     incoming: &mut HashMap<String, IncomingPending>,
     transit_relay: &str,
+    lang: &str,
 ) -> Result<(), CoreError> {
     tracing::info!("local cmd: {:?}", std::mem::discriminant(&cmd));
     match cmd {
@@ -387,7 +393,17 @@ async fn handle_local_cmd(
             send_file_offer(path, wh, evt_tx, outgoing, transit_relay).await?;
         }
         Cmd::AcceptFile { id, save_dir } => {
-            accept_file(id, save_dir, wh, evt_tx, outbox_tx, incoming, transit_relay).await?;
+            accept_file(
+                id,
+                save_dir,
+                wh,
+                evt_tx,
+                outbox_tx,
+                incoming,
+                transit_relay,
+                lang,
+            )
+            .await?;
         }
         Cmd::RejectFile { id, reason } => {
             if incoming.remove(&id).is_some() {
@@ -457,6 +473,7 @@ async fn handle_peer_msg(
     outbox_tx: &Sender<AppMsg>,
     outgoing: &mut HashMap<String, OutgoingPending>,
     incoming: &mut HashMap<String, IncomingPending>,
+    lang: &str,
 ) -> Result<(), CoreError> {
     tracing::info!("peer msg: {:?}", std::mem::discriminant(&msg));
     match msg {
@@ -522,6 +539,7 @@ async fn handle_peer_msg(
             let id_clone = id.clone();
             let evt_tx2 = evt_tx.clone();
             let outbox_tx2 = outbox_tx.clone();
+            let lang2 = lang.to_string();
             let transit_key = transfer::derive_transit_key(wh);
             smol::spawn(async move {
                 let result = run_send_task(
@@ -559,7 +577,7 @@ async fn handle_peer_msg(
                         let _ = evt_tx2
                             .send(Evt::FileError {
                                 id: id_clone,
-                                message: format!("{e}"),
+                                message: e.localize(&lang2),
                             })
                             .await;
                     }
@@ -632,9 +650,7 @@ async fn send_file_offer(
         e
     })?;
     if metadata.is_dir() {
-        return Err(CoreError::Other(
-            "暂不支持发送文件夹，请逐个选择文件".into(),
-        ));
+        return Err(CoreError::FolderUnsupported);
     }
     let size = metadata.len();
     let name = path
@@ -688,6 +704,7 @@ async fn accept_file(
     outbox_tx: &Sender<AppMsg>,
     incoming: &mut HashMap<String, IncomingPending>,
     transit_relay: &str,
+    lang: &str,
 ) -> Result<(), CoreError> {
     tracing::info!("accept_file: id={id} save_dir={}", save_dir.display());
     let pending = match incoming.get_mut(&id) {
@@ -721,6 +738,7 @@ async fn accept_file(
     let id_clone = id.clone();
     let evt_tx2 = evt_tx.clone();
     let outbox_tx2 = outbox_tx.clone();
+    let lang2 = lang.to_string();
     let transit_key = transfer::derive_transit_key(wh);
 
     smol::spawn(async move {
@@ -765,7 +783,7 @@ async fn accept_file(
                 let _ = evt_tx2
                     .send(Evt::FileError {
                         id: id_clone,
-                        message: format!("{e}"),
+                        message: e.localize(&lang2),
                     })
                     .await;
             }

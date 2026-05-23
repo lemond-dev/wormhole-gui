@@ -5,7 +5,7 @@ use crate::config::{self, Config, ConfigState};
 use serde::Deserialize;
 use std::path::PathBuf;
 use tauri::{AppHandle, State};
-use wormhole_gui_core::{spawn_session_thread, transfer, Cmd, Role, SessionConfig};
+use wormhole_gui_core::{spawn_session_thread, transfer, Cmd, CoreError, Role, SessionConfig};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -43,17 +43,18 @@ pub async fn start_session(
     };
     let mailbox_relay = config.mailbox_relay();
     let transit_relay = config.transit_relay();
+    let lang = config.language();
     // Pre-validate the transit relay format so the user gets an immediate
-    // "格式错误" toast instead of discovering it only when they try to send
-    // their first file after a successful PAKE.
-    transfer::parse_transit_relay(&transit_relay).map_err(|e| format!("{e}"))?;
+    // localised toast instead of discovering the typo only when they try to
+    // send their first file after a successful PAKE.
+    transfer::parse_transit_relay(&transit_relay).map_err(|e| e.localize(&lang))?;
     let handle = spawn_session_thread(
         role,
         SessionConfig {
             mailbox_relay,
             transit_relay,
             numeric_code: config.numeric_code(),
-            language: config.language(),
+            language: lang.clone(),
         },
     );
     let evt_rx = handle.evt_rx.clone();
@@ -66,9 +67,9 @@ pub async fn start_session(
         // 5-min TTL + relay-side PAKE handle the actual integrity check.
         let (np, pw) = code_str
             .split_once('-')
-            .ok_or_else(|| "短码格式错误：缺少 '-' 分隔".to_string())?;
+            .ok_or_else(|| CoreError::ShortCodeMissingDash.localize(&lang))?;
         if np.is_empty() || pw.is_empty() {
-            return Err("短码格式错误：nameplate 或 password 为空".to_string());
+            return Err(CoreError::ShortCodeEmptyPart.localize(&lang));
         }
         #[allow(unsafe_code)]
         let parsed = unsafe {
