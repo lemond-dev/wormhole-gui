@@ -140,7 +140,9 @@ DevTools is disabled in release builds. Diagnose UI issues either via the file l
 
 ## Working with the public relays
 
-All spikes and integration tests hit `relay.magic-wormhole.io:4000` (mailbox) and `transit.magic-wormhole.io:4001`. They're the official ones. Same-machine peers complete PAKE in ~1 s and reach ~130 MB/s on direct transit (loopback); cross-NAT scenarios fall back to relay (~1–5 MB/s) and are not exercised by the local test suite.
+The integration tests in `core/tests/integration.rs` hit the **Least Authority** public relays (`wss://mailbox.mw.leastauthority.com/v1` for mailbox, `relay.mw.leastauthority.com:4001` for transit) via the shared constants `DEFAULT_MAILBOX_RELAY` / `DEFAULT_TRANSIT_RELAY` exposed from `wormhole-gui-core` — the same defaults the Tauri Config layer hands the session thread when the user hasn't overridden them in Settings. v0.2.4 switched off the now-flaky `relay.magic-wormhole.io`; v0.2.5 finished the move to Least Authority for both mailbox and transit. The original spike crate (`wormhole-spike/`) still hard-codes the magic-wormhole.io defaults — leave it alone unless you're updating the spikes themselves.
+
+Same-machine peers complete PAKE in ~1 s and reach ~130 MB/s on direct transit (loopback); cross-NAT scenarios fall back to relay (~1–5 MB/s) and are not exercised by the local test suite.
 
 ## Mandatory reads before non-trivial changes
 
