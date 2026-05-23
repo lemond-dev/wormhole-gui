@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/icon.png",
       "icons/icon.ico"
@@ -38,6 +39,14 @@
         "displayLanguageSelector": false,
         "languages": ["SimpChinese", "English"]
       }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMwODU1MDgwMDJDMjU0NjAKUldSZ1ZNSUNnRkNGd0FNV3ppMlY1b2pzeENidHcyVUwvTmxvSFloa3ExOGZ1clIxOFFkbWVjU2sK",
+      "endpoints": [
+        "https://lemond-dev.github.io/wormhole-gui/latest.json"
+      ]
     }
   }
 }

@@ -4,6 +4,8 @@
 mod bridge;
 mod commands;
 mod config;
+mod updater;
+mod updater_cmd;
 
 use tauri::Emitter;
 
@@ -11,12 +13,18 @@ use tauri::Emitter;
 pub fn run() {
     init_tracing();
     tracing::info!("wormhole-gui v{} starting", env!("CARGO_PKG_VERSION"));
+    // Best-effort: if the previous launch came in via the portable
+    // rename-swap update path, the prior version is sitting next to us
+    // as `wormhole-gui.old.exe`. Remove it once we're up and running.
+    updater::cleanup_old_exe_on_startup();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(bridge::SessionState::new())
         .manage(config::ConfigState::load())
+        .manage(updater_cmd::PendingUpdate::default())
         .invoke_handler(tauri::generate_handler![
             commands::start_session,
             commands::send_text,
@@ -31,6 +39,8 @@ pub fn run() {
             commands::get_config,
             commands::set_config,
             commands::pick_download_dir,
+            updater_cmd::check_update,
+            updater_cmd::apply_update,
         ])
         .on_window_event(|window, event| {
             // Hand close intent to the FE so it can show the same confirm

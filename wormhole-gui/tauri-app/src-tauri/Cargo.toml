@@ -23,9 +23,13 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
+# Official auto-update plugin — handles the installed (NSIS) form. Our
+# portable-form path lives in src/updater.rs and shares the same manifest.
+tauri-plugin-updater = "2"
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 tracing-subscriber = { workspace = true }
 tracing-appender = { workspace = true }
@@ -37,10 +41,22 @@ wormhole-gui-core = { path = "../../core" }
 async-channel.workspace = true
 
 # tokio is Tauri's async runtime; we need `time` for graceful-close delay.
-tokio = { version = "1", features = ["time"] }
+tokio = { version = "1", features = ["time", "fs", "io-util"] }
 
 # %APPDATA% lookup for persistent config.
 dirs = "5"
 
 # magic-wormhole types we re-expose at the IPC boundary (Code parsing)
 magic-wormhole.workspace = true
+
+# Self-update (portable form) dependencies. reqwest with rustls avoids
+# clashing with magic-wormhole's native-tls usage on a different code path.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+futures-util = "0.3"
+# Same crate tauri-plugin-updater uses internally for sig verification, so
+# the manifest format and ed25519 / minisign semantics stay aligned.
+minisign-verify = "0.2"
+# Tauri signer wraps its public-key and signature payloads in a base64
+# envelope on top of the standard minisign format, so we decode that
+# envelope before handing the inner string to minisign-verify.
+base64 = "0.22"
