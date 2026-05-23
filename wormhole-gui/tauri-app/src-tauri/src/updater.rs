@@ -23,7 +23,7 @@ use minisign_verify::{PublicKey, Signature};
 use reqwest::Client;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 
@@ -97,24 +97,23 @@ pub struct PortableUpdatePlan {
     pub signature: String,
 }
 
-/// Heuristic detection of the deployment form. The NSIS installer drops the
-/// binary under `%LOCALAPPDATA%\Programs\wormhole-gui\`; any other location
-/// (Desktop, USB stick, custom folder) is treated as portable.
+/// Heuristic detection of the deployment form: the NSIS installer always
+/// drops a sibling `uninstall.exe` next to the main binary (so Windows can
+/// list it in Apps & Features), while a portable build is just the raw
+/// `wormhole-gui.exe` with nothing else. Checking for that sibling is much
+/// more reliable than guessing the install-directory path — Tauri's NSIS
+/// template doesn't agree with itself across releases (currentUser-mode
+/// installs land under `%LOCALAPPDATA%\<productName>`, *not* the
+/// `%LOCALAPPDATA%\Programs\<productName>` we guessed in v0.3.0; using the
+/// uninstall.exe signal sidesteps that entire family of bugs.
 pub fn is_portable() -> bool {
     let Ok(exe) = std::env::current_exe() else {
         return true;
     };
-    let Ok(local_appdata) = std::env::var("LOCALAPPDATA") else {
+    let Some(parent) = exe.parent() else {
         return true;
     };
-    // Canonicalize is over-eager here (it follows symlinks and we want a
-    // pure prefix match); lowercase string compare is enough on Windows.
-    let install_root = PathBuf::from(local_appdata)
-        .join("Programs")
-        .join("wormhole-gui");
-    let install_str = install_root.to_string_lossy().to_lowercase();
-    let exe_str = exe.to_string_lossy().to_lowercase();
-    !exe_str.starts_with(&install_str)
+    !parent.join("uninstall.exe").exists()
 }
 
 /// Fetch the manifest and return a plan if it advertises a newer version
