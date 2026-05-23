@@ -12,4 +12,11 @@ pub mod transfer;
 
 pub use error::CoreError;
 pub use protocol::{AppMsg, PROTOCOL_VERSION};
-pub use session::{spawn_session_thread, Cmd, Evt, Role, SessionHandle};
+pub use session::{spawn_session_thread, Cmd, Evt, Role, SessionConfig, SessionHandle};
+
+/// Built-in default mailbox / transit relay URLs. Re-exported from this top
+/// level so both the host crate (Tauri config layer) and the integration
+/// tests can share a single source of truth — there is no separate
+/// "production defaults vs test defaults" set.
+pub const DEFAULT_MAILBOX_RELAY: &str = "wss://mailbox.mw.leastauthority.com/v1";
+pub const DEFAULT_TRANSIT_RELAY: &str = "relay.mw.leastauthority.com:4001";

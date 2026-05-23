@@ -5,7 +5,7 @@ use crate::config::{self, Config, ConfigState};
 use serde::Deserialize;
 use std::path::PathBuf;
 use tauri::{AppHandle, State};
-use wormhole_gui_core::{spawn_session_thread, Cmd, Role};
+use wormhole_gui_core::{spawn_session_thread, transfer, Cmd, Role, SessionConfig};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -41,7 +41,20 @@ pub async fn start_session(
         SessionMode::Send => Role::Allocator,
         SessionMode::Recv => Role::Joiner,
     };
-    let handle = spawn_session_thread(role, config.numeric_code());
+    let mailbox_relay = config.mailbox_relay();
+    let transit_relay = config.transit_relay();
+    // Pre-validate the transit relay format so the user gets an immediate
+    // "格式错误" toast instead of discovering it only when they try to send
+    // their first file after a successful PAKE.
+    transfer::parse_transit_relay(&transit_relay).map_err(|e| format!("{e}"))?;
+    let handle = spawn_session_thread(
+        role,
+        SessionConfig {
+            mailbox_relay,
+            transit_relay,
+            numeric_code: config.numeric_code(),
+        },
+    );
     let evt_rx = handle.evt_rx.clone();
 
     if let SessionMode::Recv = mode {
@@ -187,6 +200,10 @@ pub fn set_config(config: State<'_, ConfigState>, mut new_config: Config) -> Res
     // Auto-accept is disabled in this build regardless of frontend / on-disk
     // value — defense in depth against a tampered config.json or bypassed UI.
     new_config.auto_accept = false;
+    // The schema version is owned by the backend, not the frontend; if a
+    // stale UI sends an older version, persist as the current schema so
+    // serde defaults stay authoritative for fields the UI doesn't know about.
+    new_config.version = config::SCHEMA_VERSION;
     config::save(&new_config).map_err(|e| format!("config save: {e}"))?;
     config.replace(new_config);
     Ok(())

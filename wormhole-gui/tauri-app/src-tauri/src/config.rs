@@ -6,7 +6,11 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
+
+// Re-export the core's defaults at module path so internal callers in this
+// crate keep their existing `config::DEFAULT_*` references working.
+pub use wormhole_gui_core::{DEFAULT_MAILBOX_RELAY, DEFAULT_TRANSIT_RELAY};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -19,6 +23,13 @@ pub struct Config {
     /// upgraded users get numeric codes by default.
     #[serde(default = "default_numeric_code")]
     pub numeric_code: bool,
+    /// New in v0.3.0. Custom mailbox / transit relays. Empty string =
+    /// fall back to the built-in default (handled at read time, not here,
+    /// so users can clear the field to reset without recalling the URL).
+    #[serde(default = "default_mailbox_relay")]
+    pub mailbox_relay: String,
+    #[serde(default = "default_transit_relay")]
+    pub transit_relay: String,
 }
 
 fn default_version() -> u32 {
@@ -29,6 +40,14 @@ fn default_numeric_code() -> bool {
     true
 }
 
+fn default_mailbox_relay() -> String {
+    DEFAULT_MAILBOX_RELAY.into()
+}
+
+fn default_transit_relay() -> String {
+    DEFAULT_TRANSIT_RELAY.into()
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -36,6 +55,8 @@ impl Default for Config {
             download_dir: wormhole_gui_core::storage::default_download_dir(),
             auto_accept: false,
             numeric_code: true,
+            mailbox_relay: default_mailbox_relay(),
+            transit_relay: default_transit_relay(),
         }
     }
 }
@@ -103,6 +124,17 @@ impl ConfigState {
     }
     pub fn numeric_code(&self) -> bool {
         self.0.lock().unwrap().numeric_code
+    }
+    /// Returns the user-configured mailbox URL, or the built-in default if
+    /// the user has cleared the field.
+    pub fn mailbox_relay(&self) -> String {
+        let v = self.0.lock().unwrap().mailbox_relay.trim().to_string();
+        if v.is_empty() { DEFAULT_MAILBOX_RELAY.into() } else { v }
+    }
+    /// Same fallback semantics as [`Self::mailbox_relay`].
+    pub fn transit_relay(&self) -> String {
+        let v = self.0.lock().unwrap().transit_relay.trim().to_string();
+        if v.is_empty() { DEFAULT_TRANSIT_RELAY.into() } else { v }
     }
 }
 

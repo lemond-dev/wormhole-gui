@@ -4,16 +4,44 @@
   import { appState } from '../store.js';
   import { getConfig, setConfig, pickDownloadDir } from '../ipc.js';
 
-  // Read-only display of where the relays live; not configurable in v0.2.
-  const MAILBOX_RELAY = 'wss://mailbox.mw.leastauthority.com/v1';
-  const TRANSIT_RELAY = 'tcp:relay.mw.leastauthority.com:4001';
+  const DEFAULT_MAILBOX_RELAY = 'wss://mailbox.mw.leastauthority.com/v1';
+  const DEFAULT_TRANSIT_RELAY = 'relay.mw.leastauthority.com:4001';
   const VERSION = '0.2.5';
 
   let config = null;
   let saving = false;
+  // Snapshot of the relay values at mount time. We compare the live edits to
+  // these to know whether the user needs to restart for the change to take
+  // effect (the running session loop captures relays at spawn time).
+  // `loaded` gates the reactive comparison so we never flash the dirty
+  // warning during the brief window between `config = ...` and the snapshot
+  // assignments below.
+  let loaded = false;
+  let initialMailbox = '';
+  let initialTransit = '';
+
+  // Empty string is back-end-normalized to the built-in default (see
+  // ConfigState::mailbox_relay / ::transit_relay in config.rs). The dirty
+  // check has to do the same normalization, otherwise clearing a field that
+  // started as "" → typing the default URL → "恢复默认" cycle would flag
+  // pseudo-changes that the running session would not actually observe.
+  function effective(v, fallback) {
+    return v && v.trim() !== '' ? v : fallback;
+  }
+
+  $: relaysDirty =
+    loaded &&
+    (effective(config.mailbox_relay, DEFAULT_MAILBOX_RELAY) !==
+      effective(initialMailbox, DEFAULT_MAILBOX_RELAY) ||
+      effective(config.transit_relay, DEFAULT_TRANSIT_RELAY) !==
+        effective(initialTransit, DEFAULT_TRANSIT_RELAY));
 
   onMount(async () => {
-    config = await getConfig();
+    const loaded_cfg = await getConfig();
+    initialMailbox = loaded_cfg.mailbox_relay;
+    initialTransit = loaded_cfg.transit_relay;
+    config = loaded_cfg;
+    loaded = true;
   });
 
   async function chooseDir() {
@@ -26,6 +54,20 @@
   async function toggleNumericCode(e) {
     config = { ...config, numeric_code: e.currentTarget.checked };
     await persist();
+  }
+
+  async function onRelayBlur() {
+    // Persist on blur (not every keystroke) so partial URLs don't churn disk.
+    await persist();
+  }
+
+  function resetRelays() {
+    config = {
+      ...config,
+      mailbox_relay: DEFAULT_MAILBOX_RELAY,
+      transit_relay: DEFAULT_TRANSIT_RELAY,
+    };
+    persist();
   }
 
   async function persist() {
@@ -83,12 +125,30 @@
 
       <div class="field">
         <label>Mailbox relay</label>
-        <input value={MAILBOX_RELAY} readonly />
+        <input
+          bind:value={config.mailbox_relay}
+          on:blur={onRelayBlur}
+          placeholder={DEFAULT_MAILBOX_RELAY}
+          spellcheck="false"
+          autocomplete="off"
+        />
       </div>
       <div class="field">
         <label>Transit relay</label>
-        <input value={TRANSIT_RELAY} readonly />
-        <span class="hint">v0.2 使用官方公共 relay。</span>
+        <input
+          bind:value={config.transit_relay}
+          on:blur={onRelayBlur}
+          placeholder={DEFAULT_TRANSIT_RELAY}
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <span class="hint">留空则使用默认值。两端必须配相同的 mailbox 才能相遇。</span>
+      </div>
+      <div class="relay-actions">
+        <button class="wm-btn-link" on:click={resetRelays} disabled={saving}>恢复默认</button>
+        {#if relaysDirty}
+          <span class="restart-warn">⚠ 已修改，重启软件后生效</span>
+        {/if}
       </div>
 
       <div class="wm-divider"></div>
@@ -149,15 +209,34 @@
     font-size: 11px;
     color: var(--text-3);
   }
+  .relay-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    min-height: 22px;
+  }
+  .wm-btn-link {
+    background: none;
+    border: none;
+    color: var(--brand);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+  }
+  .wm-btn-link:disabled {
+    color: var(--text-3);
+    cursor: default;
+  }
+  .restart-warn {
+    font-size: 11px;
+    color: #c97d27;
+  }
   .version-row {
     font-size: 12px;
     color: var(--text-3);
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
-  .version-row a {
-    color: var(--brand);
-    text-decoration: none;
   }
 </style>

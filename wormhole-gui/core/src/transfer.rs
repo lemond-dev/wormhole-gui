@@ -23,19 +23,124 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
-/// Build a transit connector with our hints/abilities. Includes the public
-/// magic-wormhole transit relay so cross-NAT fallback works out of the box.
-pub async fn init_connector() -> Result<TransitConnector, CoreError> {
+/// Build a transit connector with our hints/abilities. `transit_relay` is
+/// the user-configured `host:port` (an optional `tcp:` / `tcp://` prefix is
+/// tolerated so the value the Settings UI shows can be pasted back as-is).
+pub async fn init_connector(transit_relay: &str) -> Result<TransitConnector, CoreError> {
+    let (host, port) = parse_transit_relay(transit_relay)?;
     let abilities = Abilities::ALL;
-    let relay = RelayHint::new(
-        None,
-        [DirectHint::new("relay.mw.leastauthority.com", 4001)],
-        [],
-    );
+    let relay = RelayHint::new(None, [DirectHint::new(host, port)], []);
     let connector = transit::init(abilities, None, vec![relay])
         .await
         .map_err(CoreError::Io)?;
     Ok(connector)
+}
+
+/// Parse `[tcp[://]]host:port`. Public so callers (e.g. `start_session`) can
+/// pre-validate the user-supplied value at session-start time instead of
+/// only discovering a typo when the first file transfer is attempted.
+///
+/// Accepts:
+/// - `host:port` — `relay.example.com:4001`
+/// - `tcp:host:port` / `tcp://host:port` — UI sometimes displays this form
+/// - `[v6addr]:port` — bracketed IPv6 literal
+///
+/// Explicitly rejects `ws://` / `wss://` / `http(s)://` since those belong
+/// in the *mailbox* field; tolerating them silently here would let a misfile
+/// pass session start and only blow up on the first file send.
+pub fn parse_transit_relay(raw: &str) -> Result<(String, u16), CoreError> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(CoreError::Other("transit relay 为空".into()));
+    }
+    // Reject schemes that belong to the mailbox field — the most common
+    // user error is pasting the mailbox URL into the wrong box.
+    for bad in ["ws://", "wss://", "http://", "https://"] {
+        if trimmed.starts_with(bad) {
+            return Err(CoreError::Other(format!(
+                "transit relay 不应带 {bad} 前缀，应为 host:port 形式"
+            )));
+        }
+    }
+    // Strip the only supported optional scheme.
+    let s = trimmed
+        .strip_prefix("tcp://")
+        .or_else(|| trimmed.strip_prefix("tcp:"))
+        .unwrap_or(trimmed);
+
+    // IPv6 literal: `[addr]:port`.
+    let (host, port_str) = if let Some(rest) = s.strip_prefix('[') {
+        let (addr, tail) = rest.rsplit_once(']').ok_or_else(|| {
+            CoreError::Other(format!("transit relay IPv6 缺少右括号: {raw}"))
+        })?;
+        let port_part = tail
+            .strip_prefix(':')
+            .ok_or_else(|| CoreError::Other(format!("transit relay IPv6 缺少端口: {raw}")))?;
+        (addr, port_part)
+    } else {
+        s.rsplit_once(':').ok_or_else(|| {
+            CoreError::Other(format!("transit relay 格式错误 (应为 host:port): {raw}"))
+        })?
+    };
+    let port = port_str
+        .parse::<u16>()
+        .map_err(|_| CoreError::Other(format!("transit relay 端口无效: {port_str}")))?;
+    if host.is_empty() {
+        return Err(CoreError::Other("transit relay host 为空".into()));
+    }
+    Ok((host.to_string(), port))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_transit_relay;
+
+    #[test]
+    fn plain_host_port() {
+        let (h, p) = parse_transit_relay("example.com:4001").unwrap();
+        assert_eq!(h, "example.com");
+        assert_eq!(p, 4001);
+    }
+
+    #[test]
+    fn strips_tcp_scheme() {
+        let (h, p) = parse_transit_relay("tcp://example.com:4001").unwrap();
+        assert_eq!(h, "example.com");
+        assert_eq!(p, 4001);
+        let (h, p) = parse_transit_relay("tcp:example.com:4001").unwrap();
+        assert_eq!(h, "example.com");
+        assert_eq!(p, 4001);
+    }
+
+    #[test]
+    fn ipv6_literal() {
+        let (h, p) = parse_transit_relay("[::1]:4001").unwrap();
+        assert_eq!(h, "::1");
+        assert_eq!(p, 4001);
+    }
+
+    #[test]
+    fn rejects_mailbox_scheme() {
+        for bad in [
+            "wss://mailbox.example/v1",
+            "ws://example:4000/v1",
+            "http://x:1",
+        ] {
+            assert!(
+                parse_transit_relay(bad).is_err(),
+                "should reject {bad} as transit"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_missing_port_or_empty() {
+        assert!(parse_transit_relay("example.com").is_err());
+        assert!(parse_transit_relay(":4001").is_err());
+        assert!(parse_transit_relay("example.com:99999").is_err());
+        assert!(parse_transit_relay("").is_err());
+        assert!(parse_transit_relay("  ").is_err());
+    }
 }
 
 pub fn our_hints(connector: &TransitConnector) -> Hints {

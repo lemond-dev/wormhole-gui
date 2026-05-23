@@ -1,4 +1,4 @@
-# Wormhole-GUI 架构方案（v0.1）
+# wormhole-gui 架构方案（v0.1）
 
 > 基于 magic-wormhole.rs 的 Windows 端会话式 GUI 文件传输工具
 >

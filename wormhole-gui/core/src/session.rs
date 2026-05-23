@@ -123,15 +123,28 @@ pub struct SessionHandle {
     pub thread: std::thread::JoinHandle<()>,
 }
 
-pub fn spawn_session_thread(role: Role, numeric_code: bool) -> SessionHandle {
+/// Configuration the session thread needs at startup. Pulled out into a
+/// struct so future per-session knobs (timeouts, app_id override) don't
+/// require yet another spawn-time positional argument.
+#[derive(Debug, Clone)]
+pub struct SessionConfig {
+    pub mailbox_relay: String,
+    pub transit_relay: String,
+    pub numeric_code: bool,
+}
+
+pub fn spawn_session_thread(role: Role, cfg: SessionConfig) -> SessionHandle {
     let (cmd_tx, cmd_rx) = bounded::<Cmd>(32);
     let (evt_tx, evt_rx) = bounded::<Evt>(128);
     let thread = std::thread::Builder::new()
         .name("wh-session".into())
         .spawn(move || {
-            tracing::info!("session thread started role={role:?} numeric={numeric_code}");
+            tracing::info!(
+                "session thread started role={role:?} numeric={} mailbox={} transit={}",
+                cfg.numeric_code, cfg.mailbox_relay, cfg.transit_relay
+            );
             smol::block_on(async move {
-                let result = run(role, numeric_code, cmd_rx, evt_tx.clone()).await;
+                let result = run(role, cfg, cmd_rx, evt_tx.clone()).await;
                 let reason = match result {
                     Ok(()) => {
                         tracing::info!("session ended cleanly");
@@ -186,13 +199,15 @@ struct IncomingPending {
 
 async fn run(
     role: Role,
-    numeric_code: bool,
+    session_cfg: SessionConfig,
     cmd_rx: Receiver<Cmd>,
     evt_tx: Sender<Evt>,
 ) -> Result<(), CoreError> {
     // ── PAKE ──
     let mut cfg = mw_transfer::APP_CONFIG.clone();
-    cfg.rendezvous_url = std::borrow::Cow::Borrowed("wss://mailbox.mw.leastauthority.com/v1");
+    cfg.rendezvous_url = std::borrow::Cow::Owned(session_cfg.mailbox_relay.clone());
+    let transit_relay = session_cfg.transit_relay.clone();
+    let numeric_code = session_cfg.numeric_code;
     tracing::info!("connecting to relay: {}", cfg.rendezvous_url);
     let mut wh = match role {
         Role::Allocator => {
@@ -277,7 +292,7 @@ async fn run(
                     for (_, i) in incoming.iter_mut() { i.cancel_tx = None; }
                     return Ok(());
                 }
-                if let Err(e) = handle_local_cmd(c, &mut wh, &evt_tx, &outbox_tx, &mut outgoing, &mut incoming).await {
+                if let Err(e) = handle_local_cmd(c, &mut wh, &evt_tx, &outbox_tx, &mut outgoing, &mut incoming, &transit_relay).await {
                     tracing::error!("handle_local_cmd error: {e:?}");
                     let _ = evt_tx.send(Evt::Error {
                         code: e.code().into(),
@@ -320,6 +335,7 @@ async fn run(
 // Handlers
 // ============================================================
 
+#[allow(clippy::too_many_arguments)]
 async fn handle_local_cmd(
     cmd: Cmd,
     wh: &mut Wormhole,
@@ -327,6 +343,7 @@ async fn handle_local_cmd(
     outbox_tx: &Sender<AppMsg>,
     outgoing: &mut HashMap<String, OutgoingPending>,
     incoming: &mut HashMap<String, IncomingPending>,
+    transit_relay: &str,
 ) -> Result<(), CoreError> {
     tracing::info!("local cmd: {:?}", std::mem::discriminant(&cmd));
     match cmd {
@@ -355,10 +372,10 @@ async fn handle_local_cmd(
             let _ = evt_tx.send(Evt::TextSent { id, content, ts }).await;
         }
         Cmd::SendFile { path } => {
-            send_file_offer(path, wh, evt_tx, outgoing).await?;
+            send_file_offer(path, wh, evt_tx, outgoing, transit_relay).await?;
         }
         Cmd::AcceptFile { id, save_dir } => {
-            accept_file(id, save_dir, wh, evt_tx, outbox_tx, incoming).await?;
+            accept_file(id, save_dir, wh, evt_tx, outbox_tx, incoming, transit_relay).await?;
         }
         Cmd::RejectFile { id, reason } => {
             if incoming.remove(&id).is_some() {
@@ -595,6 +612,7 @@ async fn send_file_offer(
     wh: &mut Wormhole,
     evt_tx: &Sender<Evt>,
     outgoing: &mut HashMap<String, OutgoingPending>,
+    transit_relay: &str,
 ) -> Result<(), CoreError> {
     tracing::info!("send_file_offer: path={}", path.display());
     let metadata = smol::fs::metadata(&path).await.map_err(|e| {
@@ -615,7 +633,7 @@ async fn send_file_offer(
     let mime = mime_guess(&name);
     tracing::info!("send_file_offer: name={name} size={size}");
 
-    let connector = transfer::init_connector().await.map_err(|e| {
+    let connector = transfer::init_connector(transit_relay).await.map_err(|e| {
         tracing::error!("init_connector (send) failed: {e:?}");
         e
     })?;
@@ -649,6 +667,7 @@ async fn send_file_offer(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn accept_file(
     id: String,
     save_dir: PathBuf,
@@ -656,6 +675,7 @@ async fn accept_file(
     evt_tx: &Sender<Evt>,
     outbox_tx: &Sender<AppMsg>,
     incoming: &mut HashMap<String, IncomingPending>,
+    transit_relay: &str,
 ) -> Result<(), CoreError> {
     tracing::info!("accept_file: id={id} save_dir={}", save_dir.display());
     let pending = match incoming.get_mut(&id) {
@@ -665,7 +685,7 @@ async fn accept_file(
             return Ok(());
         }
     };
-    let connector = transfer::init_connector().await.map_err(|e| {
+    let connector = transfer::init_connector(transit_relay).await.map_err(|e| {
         tracing::error!("init_connector (recv) failed: {e:?}");
         e
     })?;

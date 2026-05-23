@@ -11,7 +11,18 @@
 
 use std::str::FromStr;
 use std::time::{Duration, Instant};
-use wormhole_gui_core::{spawn_session_thread, Cmd, Evt, Role, SessionHandle};
+use wormhole_gui_core::{
+    spawn_session_thread, Cmd, Evt, Role, SessionConfig, SessionHandle, DEFAULT_MAILBOX_RELAY,
+    DEFAULT_TRANSIT_RELAY,
+};
+
+fn test_session_config(numeric: bool) -> SessionConfig {
+    SessionConfig {
+        mailbox_relay: DEFAULT_MAILBOX_RELAY.into(),
+        transit_relay: DEFAULT_TRANSIT_RELAY.into(),
+        numeric_code: numeric,
+    }
+}
 
 /// Drain `evt_rx` until a predicate matches, with a deadline.
 fn wait_for<F>(handle: &SessionHandle, deadline: Duration, mut pred: F) -> Evt
@@ -65,8 +76,8 @@ fn send_blocking<T>(tx: &async_channel::Sender<T>, msg: T) {
 #[test]
 #[ignore = "needs network: public magic-wormhole relay"]
 fn happy_path_allocator_joiner() {
-    let alloc = spawn_session_thread(Role::Allocator, false);
-    let join = spawn_session_thread(Role::Joiner, false);
+    let alloc = spawn_session_thread(Role::Allocator, test_session_config(false));
+    let join = spawn_session_thread(Role::Joiner, test_session_config(false));
 
     // 1. Allocator emits code; forward to joiner.
     let code = match wait_for(&alloc, Duration::from_secs(15), |e| {
@@ -118,8 +129,8 @@ fn happy_path_allocator_joiner() {
 #[test]
 #[ignore = "needs network: public magic-wormhole relay"]
 fn pake_failure_with_wrong_code() {
-    let alloc = spawn_session_thread(Role::Allocator, false);
-    let join = spawn_session_thread(Role::Joiner, false);
+    let alloc = spawn_session_thread(Role::Allocator, test_session_config(false));
+    let join = spawn_session_thread(Role::Joiner, test_session_config(false));
 
     let code = match wait_for(&alloc, Duration::from_secs(15), |e| {
         matches!(e, Evt::Code(_))
@@ -159,8 +170,8 @@ fn pake_failure_with_wrong_code() {
 fn small_file_transfer_round_trip() {
     use std::io::Write;
 
-    let alloc = spawn_session_thread(Role::Allocator, false);
-    let join = spawn_session_thread(Role::Joiner, false);
+    let alloc = spawn_session_thread(Role::Allocator, test_session_config(false));
+    let join = spawn_session_thread(Role::Joiner, test_session_config(false));
 
     // Bring both sides to Connected, same as happy_path.
     let code = match wait_for(&alloc, Duration::from_secs(15), |e| {
