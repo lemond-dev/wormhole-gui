@@ -70,9 +70,9 @@ pub fn parse_transit_relay(raw: &str) -> Result<(String, u16), CoreError> {
 
     // IPv6 literal: `[addr]:port`.
     let (host, port_str) = if let Some(rest) = s.strip_prefix('[') {
-        let (addr, tail) = rest.rsplit_once(']').ok_or_else(|| {
-            CoreError::Other(format!("transit relay IPv6 缺少右括号: {raw}"))
-        })?;
+        let (addr, tail) = rest
+            .rsplit_once(']')
+            .ok_or_else(|| CoreError::Other(format!("transit relay IPv6 缺少右括号: {raw}")))?;
         let port_part = tail
             .strip_prefix(':')
             .ok_or_else(|| CoreError::Other(format!("transit relay IPv6 缺少端口: {raw}")))?;

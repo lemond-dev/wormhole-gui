@@ -141,7 +141,9 @@ pub fn spawn_session_thread(role: Role, cfg: SessionConfig) -> SessionHandle {
         .spawn(move || {
             tracing::info!(
                 "session thread started role={role:?} numeric={} mailbox={} transit={}",
-                cfg.numeric_code, cfg.mailbox_relay, cfg.transit_relay
+                cfg.numeric_code,
+                cfg.mailbox_relay,
+                cfg.transit_relay
             );
             smol::block_on(async move {
                 let result = run(role, cfg, cmd_rx, evt_tx.clone()).await;
@@ -219,10 +221,12 @@ async fn run(
                 // attempts well below the 1M-combo space.
                 #[allow(unsafe_code)]
                 let password = unsafe { magic_wormhole::Password::new_unchecked(pw) };
-                MailboxConnection::create_with_password(cfg, password).await.map_err(|e| {
-                    tracing::error!("MailboxConnection::create_with_password failed: {e:?}");
-                    e
-                })?
+                MailboxConnection::create_with_password(cfg, password)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("MailboxConnection::create_with_password failed: {e:?}");
+                        e
+                    })?
             } else {
                 tracing::info!("allocator: creating mailbox (wordlist code)");
                 MailboxConnection::create(cfg, 2).await.map_err(|e| {
@@ -252,10 +256,12 @@ async fn run(
                 }
             };
             tracing::info!("joiner: connecting to mailbox with code");
-            let mc = MailboxConnection::connect(cfg, code, true).await.map_err(|e| {
-                tracing::error!("MailboxConnection::connect failed: {e:?}");
-                e
-            })?;
+            let mc = MailboxConnection::connect(cfg, code, true)
+                .await
+                .map_err(|e| {
+                    tracing::error!("MailboxConnection::connect failed: {e:?}");
+                    e
+                })?;
             tracing::info!("joiner: mailbox connected, running PAKE");
             let wh = Wormhole::connect(mc).await.map_err(|e| {
                 tracing::error!("Wormhole::connect (joiner) failed: {e:?}");
@@ -835,7 +841,10 @@ async fn run_recv_task(
         tracing::error!("connect_transit (recv) id={id} failed: {e:?}");
         e
     })?;
-    tracing::info!("run_recv_task: id={id} transit connected, streaming to {}", save_path.display());
+    tracing::info!(
+        "run_recv_task: id={id} transit connected, streaming to {}",
+        save_path.display()
+    );
     let id_for_progress = id.clone();
     let evt_tx2 = evt_tx.clone();
     transfer::stream_recv(

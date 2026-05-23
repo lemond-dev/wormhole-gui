@@ -129,12 +129,20 @@ impl ConfigState {
     /// the user has cleared the field.
     pub fn mailbox_relay(&self) -> String {
         let v = self.0.lock().unwrap().mailbox_relay.trim().to_string();
-        if v.is_empty() { DEFAULT_MAILBOX_RELAY.into() } else { v }
+        if v.is_empty() {
+            DEFAULT_MAILBOX_RELAY.into()
+        } else {
+            v
+        }
     }
     /// Same fallback semantics as [`Self::mailbox_relay`].
     pub fn transit_relay(&self) -> String {
         let v = self.0.lock().unwrap().transit_relay.trim().to_string();
-        if v.is_empty() { DEFAULT_TRANSIT_RELAY.into() } else { v }
+        if v.is_empty() {
+            DEFAULT_TRANSIT_RELAY.into()
+        } else {
+            v
+        }
     }
 }
 

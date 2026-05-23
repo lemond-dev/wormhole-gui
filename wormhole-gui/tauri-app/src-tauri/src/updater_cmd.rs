@@ -135,9 +135,8 @@ pub async fn apply_update(app: AppHandle) -> Result<(), String> {
                     // time.
                     use std::sync::atomic::{AtomicU64, Ordering};
                     static DOWNLOADED: AtomicU64 = AtomicU64::new(0);
-                    let downloaded =
-                        DOWNLOADED.fetch_add(chunk_length as u64, Ordering::Relaxed)
-                            + chunk_length as u64;
+                    let downloaded = DOWNLOADED.fetch_add(chunk_length as u64, Ordering::Relaxed)
+                        + chunk_length as u64;
                     let _ = app_for_progress.emit(
                         "updater:progress",
                         serde_json::json!({

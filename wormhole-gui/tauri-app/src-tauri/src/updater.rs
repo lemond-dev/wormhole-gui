@@ -122,9 +122,7 @@ pub fn is_portable() -> bool {
 pub async fn check_portable_update(
     current_version: &str,
 ) -> Result<Option<PortableUpdatePlan>, UpdaterError> {
-    let client = Client::builder()
-        .timeout(Duration::from_secs(15))
-        .build()?;
+    let client = Client::builder().timeout(Duration::from_secs(15)).build()?;
     let resp = client.get(MANIFEST_URL).send().await?.error_for_status()?;
     let body = resp.bytes().await?;
     let manifest: Manifest = serde_json::from_slice(&body)?;
@@ -155,9 +153,8 @@ pub async fn check_portable_update(
 fn is_newer_version(remote: &str, current: &str) -> bool {
     let r = remote.trim_start_matches('v');
     let c = current.trim_start_matches('v');
-    let parse = |s: &str| -> Option<Vec<u32>> {
-        s.split('.').map(|p| p.parse::<u32>().ok()).collect()
-    };
+    let parse =
+        |s: &str| -> Option<Vec<u32>> { s.split('.').map(|p| p.parse::<u32>().ok()).collect() };
     match (parse(r), parse(c)) {
         (Some(rv), Some(cv)) => rv > cv,
         _ => r > c,
