@@ -58,7 +58,7 @@ cargo run --release -- all   # all 13 protocol spikes (T1.1 through T1.13)
 cargo run --release -- t4    # single spike
 ```
 
-To test the full GUI with two peers locally, **run the built `target/release/wormhole-gui-tauri.exe` twice** (each is its own process). `pnpm tauri:dev` is single-instance.
+To test the full GUI with two peers locally, **run the built `target/release/wormhole-gui.exe` twice** (each is its own process). `pnpm tauri:dev` is single-instance.
 
 ## Architecture: the three constraints that shape everything
 

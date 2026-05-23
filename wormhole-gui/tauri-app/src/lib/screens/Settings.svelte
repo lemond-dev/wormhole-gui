@@ -94,7 +94,7 @@
       <div class="wm-divider"></div>
 
       <div class="version-row">
-        <span>Wormhole-GUI v{VERSION}</span>
+        <span>wormhole-gui v{VERSION}</span>
       </div>
     {:else}
       <div class="hint">加载中…</div>

@@ -1,4 +1,4 @@
-# chat_one — wormhole-gui
+# wormhole-gui
 
 基于 [magic-wormhole.rs](https://github.com/magic-wormhole/magic-wormhole.rs) 的
 Windows 端会话式 GUI 文件 / 文字传输工具。
