@@ -7,7 +7,7 @@
 
   const DEFAULT_MAILBOX_RELAY = 'wss://mailbox.mw.leastauthority.com/v1';
   const DEFAULT_TRANSIT_RELAY = 'relay.mw.leastauthority.com:4001';
-  const VERSION = '0.2.5';
+  const VERSION = '0.3.0';
 
   let config = null;
   let saving = false;
