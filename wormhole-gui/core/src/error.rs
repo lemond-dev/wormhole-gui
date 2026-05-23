@@ -47,6 +47,20 @@ pub enum CoreError {
     ShortCodeMissingDash,
     #[error("short code has an empty nameplate or password section")]
     ShortCodeEmptyPart,
+    #[error("peer rejected the file: {0}")]
+    FileRejectedByPeer(String),
+    #[error("path not found: {0}")]
+    PathNotFound(String),
+    #[error("transit cancelled by user")]
+    TransitCancelled,
+    #[error("transit connect failed: {0}")]
+    TransitConnectFailed(String),
+    #[error("transit send_record failed: {0}")]
+    TransitSendRecord(String),
+    #[error("transit receive_record failed: {0}")]
+    TransitReceiveRecord(String),
+    #[error("transit flush failed: {0}")]
+    TransitFlush(String),
     #[error("{0}")]
     Other(String),
 }
@@ -73,6 +87,13 @@ impl CoreError {
             CoreError::TransitRelayHostEmpty => "transit_relay_host_empty",
             CoreError::ShortCodeMissingDash => "short_code_missing_dash",
             CoreError::ShortCodeEmptyPart => "short_code_empty_part",
+            CoreError::FileRejectedByPeer(_) => "file_rejected_by_peer",
+            CoreError::PathNotFound(_) => "path_not_found",
+            CoreError::TransitCancelled => "transit_cancelled",
+            CoreError::TransitConnectFailed(_) => "transit_connect_failed",
+            CoreError::TransitSendRecord(_) => "transit_send_record",
+            CoreError::TransitReceiveRecord(_) => "transit_receive_record",
+            CoreError::TransitFlush(_) => "transit_flush",
             CoreError::Other(_) => "other",
         }
     }
@@ -123,8 +144,48 @@ impl CoreError {
             CoreError::TransitRelayHostEmpty => "transit relay host 为空".into(),
             CoreError::ShortCodeMissingDash => "短码格式错误：缺少 '-' 分隔".into(),
             CoreError::ShortCodeEmptyPart => "短码格式错误：nameplate 或 password 为空".into(),
+            CoreError::FileRejectedByPeer(s) => format!("对方拒绝: {s}"),
+            CoreError::PathNotFound(s) => format!("路径不存在: {s}"),
+            CoreError::TransitCancelled => "传输已取消".into(),
+            CoreError::TransitConnectFailed(s) => format!("transit 连接失败：{s}"),
+            CoreError::TransitSendRecord(s) => format!("transit 发送失败：{s}"),
+            CoreError::TransitReceiveRecord(s) => format!("transit 接收失败：{s}"),
+            CoreError::TransitFlush(s) => format!("transit flush 失败：{s}"),
             CoreError::Other(s) => s.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn localize_zh_for_typed_variant() {
+        let e = CoreError::PakeFailed;
+        assert!(e.localize("zh").contains("PAKE"));
+        assert!(e.localize("zh").contains("失败"));
+    }
+
+    #[test]
+    fn localize_en_via_display_fallback() {
+        // Any non-zh language falls through to Display, which is English.
+        assert_eq!(
+            CoreError::PakeFailed.localize("en"),
+            CoreError::PakeFailed.to_string()
+        );
+        assert_eq!(
+            CoreError::PakeFailed.localize("ja"),
+            CoreError::PakeFailed.to_string()
+        );
+        assert!(CoreError::PakeFailed.localize("en").contains("PAKE"));
+    }
+
+    #[test]
+    fn localize_carries_interpolated_data() {
+        let e = CoreError::TransitRelayBadPort("99999".into());
+        assert!(e.localize("zh").contains("99999"));
+        assert!(e.localize("en").contains("99999"));
     }
 }
 

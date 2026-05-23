@@ -168,7 +168,7 @@ pub async fn close_session(state: State<'_, SessionState>) -> Result<(), String>
 /// Open Windows Explorer with the given file selected. v0.1 is Windows-only;
 /// extend with `cfg(target_os = ...)` when adding macOS/Linux.
 #[tauri::command]
-pub fn reveal_in_folder(path: String) -> Result<(), String> {
+pub fn reveal_in_folder(config: State<'_, ConfigState>, path: String) -> Result<(), String> {
     use std::os::windows::process::CommandExt;
     let p = std::path::Path::new(&path);
     if p.exists() {
@@ -187,7 +187,7 @@ pub fn reveal_in_folder(path: String) -> Result<(), String> {
             .spawn()
             .map_err(|e| format!("explorer: {e}"))?;
     } else {
-        return Err(format!("路径不存在: {path}"));
+        return Err(CoreError::PathNotFound(path).localize(&config.language()));
     }
     Ok(())
 }

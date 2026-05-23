@@ -168,7 +168,7 @@ pub async fn connect_transit(
     let (transit, _info) = connector
         .connect(role, transit_key, their_abilities, Arc::new(their_hints))
         .await
-        .map_err(|e| CoreError::Other(format!("transit connect: {e}")))?;
+        .map_err(|e| CoreError::TransitConnectFailed(format!("{e}")))?;
     tracing::info!("transit established");
     Ok(transit)
 }
@@ -196,7 +196,7 @@ where
     on_progress(0);
     loop {
         if let Ok(()) = cancel.try_recv() {
-            return Err(CoreError::Other("cancelled by user".into()));
+            return Err(CoreError::TransitCancelled);
         }
         let n = f.read(&mut buf).await?;
         if n == 0 {
@@ -205,7 +205,7 @@ where
         transit
             .send_record(&buf[..n])
             .await
-            .map_err(|e| CoreError::Other(format!("send_record: {e}")))?;
+            .map_err(|e| CoreError::TransitSendRecord(format!("{e}")))?;
         sent += n as u64;
         if last_emit.elapsed() >= Duration::from_millis(100) {
             on_progress(sent);
@@ -215,7 +215,7 @@ where
     transit
         .flush()
         .await
-        .map_err(|e| CoreError::Other(format!("transit flush: {e}")))?;
+        .map_err(|e| CoreError::TransitFlush(format!("{e}")))?;
     on_progress(sent);
     if sent != expected_size {
         return Err(CoreError::Protocol(format!(
@@ -251,12 +251,12 @@ where
             // Drop the partial file on cancel.
             drop(f);
             let _ = smol::fs::remove_file(save_path).await;
-            return Err(CoreError::Other("cancelled by user".into()));
+            return Err(CoreError::TransitCancelled);
         }
         let buf = transit
             .receive_record()
             .await
-            .map_err(|e| CoreError::Other(format!("receive_record: {e}")))?;
+            .map_err(|e| CoreError::TransitReceiveRecord(format!("{e}")))?;
         let remaining = (expected_size - got) as usize;
         if buf.len() > remaining {
             // Sender overshot: refuse the extra bytes.

@@ -591,7 +591,7 @@ async fn handle_peer_msg(
             let _ = evt_tx
                 .send(Evt::FileError {
                     id,
-                    message: format!("对方拒绝: {reason}"),
+                    message: CoreError::FileRejectedByPeer(reason).localize(lang),
                 })
                 .await;
         }

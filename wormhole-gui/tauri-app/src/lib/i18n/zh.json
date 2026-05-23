@@ -28,7 +28,7 @@
     "instr2": "不要在同一渠道既发短码又发内容。",
     "waiting": "等待对方连接…",
     "ttlLabel": "短码有效期 ",
-    "ttlExpired": "短码已过期 (code expired)"
+    "ttlExpired": "短码已过期"
   },
   "joiner": {
     "title": "接收",
@@ -113,7 +113,7 @@
     "numericCodeLabel": "使用数字短码",
     "numericCodeHint": "示例：15-123-456。比英文词稍弱但口播更顺；下次会话生效。",
     "languageLabel": "语言 / Language",
-    "languageHint": "立即生效；新会话的错误提示在重启后用新语言。",
+    "languageHint": "立即生效；下次会话的错误提示也会跟着切换。",
     "languageZh": "中文",
     "languageEn": "English",
     "relayHint": "留空则使用默认值。两端必须配相同的 mailbox 才能相遇。",

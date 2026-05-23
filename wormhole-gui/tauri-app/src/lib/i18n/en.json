@@ -113,7 +113,7 @@
     "numericCodeLabel": "Use numeric short code",
     "numericCodeHint": "Example: 15-123-456. Slightly weaker than the word list but easier to read aloud; takes effect on the next session.",
     "languageLabel": "Language / 语言",
-    "languageHint": "Takes effect immediately; error messages in new sessions use the new language after restart.",
+    "languageHint": "Takes effect immediately; the next session's error messages will also switch.",
     "languageZh": "中文",
     "languageEn": "English",
     "relayHint": "Leave blank to use the built-in default. Both peers must point at the same mailbox to meet.",
