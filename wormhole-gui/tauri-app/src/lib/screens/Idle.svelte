@@ -1,4 +1,5 @@
 <script>
+  import { _ } from 'svelte-i18n';
   import Icon from '../Icon.svelte';
   import { startSend } from '../ipc.js';
   import { appState } from '../store.js';
@@ -15,30 +16,30 @@
         <span class="badge"><Icon name="shield-check" size={13} stroke={2.2} /></span>
         Wormhole
       </div>
-      <button class="settings-btn" title="设置" on:click={openSettings}>
+      <button class="settings-btn" title={$_('common.settings')} on:click={openSettings}>
         <Icon name="settings" size={16} />
       </button>
     </div>
-    <h1 style="margin-top: 28px;">建立一次性加密会话</h1>
+    <h1 style="margin-top: 28px;">{$_('idle.title')}</h1>
     <div class="lede">
-      用一个短码把两台设备配对，双向收发文字与文件。<br />
-      关闭即销毁，没有账号、没有历史。
+      {$_('idle.desc1')}<br />
+      {$_('idle.desc2')}
     </div>
     <div class="choices">
       <button class="wm-bigchoice" on:click={chooseSend}>
         <span class="icon"><Icon name="send" size={18} stroke={2} /></span>
-        <span class="title">发送</span>
-        <span class="sub">生成短码</span>
+        <span class="title">{$_('idle.send')}</span>
+        <span class="sub">{$_('idle.sendSub')}</span>
       </button>
       <button class="wm-bigchoice" on:click={chooseRecv}>
         <span class="icon"><Icon name="download" size={18} stroke={2} /></span>
-        <span class="title">接收</span>
-        <span class="sub">输入短码</span>
+        <span class="title">{$_('idle.recv')}</span>
+        <span class="sub">{$_('idle.recvSub')}</span>
       </button>
     </div>
     <div class="footer-note">
       <Icon name="lock" size={11} />
-      端到端加密的临时会话，不需要注册
+      {$_('idle.footer')}
     </div>
   </div>
 </div>

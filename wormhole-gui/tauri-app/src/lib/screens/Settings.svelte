@@ -2,8 +2,10 @@
   import { onMount } from 'svelte';
   import SimpleHeader from '../components/SimpleHeader.svelte';
   import { appState } from '../store.js';
+  import { _ } from 'svelte-i18n';
   import { getConfig, setConfig, pickDownloadDir, triggerUpdateCheck } from '../ipc.js';
   import { updateState } from '../store.js';
+  import { setLanguageFromConfig } from '../i18n';
 
   const DEFAULT_MAILBOX_RELAY = 'wss://mailbox.mw.leastauthority.com/v1';
   const DEFAULT_TRANSIT_RELAY = 'relay.mw.leastauthority.com:4001';
@@ -54,6 +56,14 @@
 
   async function toggleNumericCode(e) {
     config = { ...config, numeric_code: e.currentTarget.checked };
+    await persist();
+  }
+
+  // Bind:value already mutates config.language; the change handler exists
+  // to push the new locale to svelte-i18n (so the UI flips immediately
+  // without waiting for the persist round-trip) and to persist.
+  async function onLanguageChange() {
+    setLanguageFromConfig(config.language);
     await persist();
   }
 
@@ -113,37 +123,47 @@
 </script>
 
 <div class="wm-app">
-  <SimpleHeader title="设置" onBack={back} showSettings={false} />
+  <SimpleHeader title={$_('settings.title')} onBack={back} showSettings={false} />
   <div class="wm-flowpage wm-settings" style="padding: 18px 22px; gap: 4px;">
 
     {#if config}
+      <!-- Language at the top: changes here are immediately visible across
+           the whole UI, so it makes sense as the first row for users who
+           need to switch languages just to read the rest of the page. -->
       <div class="field">
-        <label>默认下载目录</label>
+        <label for="lang-select">{$_('settings.languageLabel')}</label>
+        <select id="lang-select" bind:value={config.language} on:change={onLanguageChange} disabled={saving}>
+          <option value="zh">{$_('settings.languageZh')}</option>
+          <option value="en">{$_('settings.languageEn')}</option>
+        </select>
+        <span class="hint">{$_('settings.languageHint')}</span>
+      </div>
+
+      <div class="wm-divider"></div>
+
+      <div class="field">
+        <label>{$_('settings.downloadDirLabel')}</label>
         <div class="dir-row">
           <input value={config.download_dir} readonly />
-          <button class="wm-btn" on:click={chooseDir} disabled={saving}>选择…</button>
+          <button class="wm-btn" on:click={chooseDir} disabled={saving}>{$_('settings.downloadDirPick')}</button>
         </div>
-        <span class="hint">接收的文件会带时间戳避免覆盖。</span>
+        <span class="hint">{$_('settings.downloadDirHint')}</span>
       </div>
 
       <div class="field">
         <label>
           <input type="checkbox" checked={false} disabled={true} />
-          自动接收文件
+          {$_('settings.autoAcceptLabel')}
         </label>
-        <span class="hint">
-          暂时禁用 — 当前版本统一使用人工确认，避免恶意载体（.lnk / .hta / .iso / 宏文档等）自动落盘。
-        </span>
+        <span class="hint">{$_('settings.autoAcceptHint')}</span>
       </div>
 
       <div class="field">
         <label>
           <input type="checkbox" checked={config.numeric_code} on:change={toggleNumericCode} disabled={saving} />
-          使用数字短码
+          {$_('settings.numericCodeLabel')}
         </label>
-        <span class="hint">
-          示例：15-123-456。比英文词稍弱但口播更顺；下次会话生效。
-        </span>
+        <span class="hint">{$_('settings.numericCodeHint')}</span>
       </div>
 
       <div class="wm-divider"></div>
@@ -167,12 +187,12 @@
           spellcheck="false"
           autocomplete="off"
         />
-        <span class="hint">留空则使用默认值。两端必须配相同的 mailbox 才能相遇。</span>
+        <span class="hint">{$_('settings.relayHint')}</span>
       </div>
       <div class="relay-actions">
-        <button class="wm-btn-link" on:click={resetRelays} disabled={saving}>恢复默认</button>
+        <button class="wm-btn-link" on:click={resetRelays} disabled={saving}>{$_('settings.resetDefaults')}</button>
         {#if relaysDirty}
-          <span class="restart-warn">⚠ 已修改，重启软件后生效</span>
+          <span class="restart-warn">{$_('settings.restartWarning')}</span>
         {/if}
       </div>
 
@@ -181,14 +201,14 @@
       <div class="version-row">
         <span>wormhole-gui v{VERSION}</span>
         <button class="wm-btn-link" on:click={onCheckUpdate} disabled={checking}>
-          {checking ? '检查中…' : '检查更新'}
+          {checking ? $_('settings.checking') : $_('settings.checkUpdate')}
         </button>
       </div>
       {#if showNoUpdateToast}
-        <div class="hint" style="text-align: right; color: var(--text-2);">已是最新版本</div>
+        <div class="hint" style="text-align: right; color: var(--text-2);">{$_('settings.upToDate')}</div>
       {/if}
     {:else}
-      <div class="hint">加载中…</div>
+      <div class="hint">{$_('common.loading')}</div>
     {/if}
   </div>
 </div>

@@ -1,4 +1,5 @@
 <script>
+  import { _ } from 'svelte-i18n';
   import Icon from '../Icon.svelte';
   import SimpleHeader from '../components/SimpleHeader.svelte';
   import { appState, lastError } from '../store.js';
@@ -37,11 +38,11 @@
 </script>
 
 <div class="wm-app">
-  <SimpleHeader title="接收" onBack={back} />
+  <SimpleHeader title={$_('joiner.title')} onBack={back} />
   <div class="wm-flowpage">
-    <h2>输入对方给你的短码</h2>
+    <h2>{$_('joiner.subtitle')}</h2>
     <div class="desc">
-      格式形如 <span class="mono">15-123-456</span> 或 <span class="mono">26-dinosaur-spaniel</span>。自动小写并加连字符。
+      {$_('joiner.formatHint')}<span class="mono">15-123-456</span> / <span class="mono">26-dinosaur-spaniel</span>{$_('joiner.formatHintTail')}
     </div>
     <div class="wm-codeinput">
       <input
@@ -56,14 +57,14 @@
     {#if invalid}
       <div style="font-size:12px; color:var(--danger); display:flex; align-items:center; gap:6px;">
         <Icon name="alert-circle" size={13} />
-        短码不正确，请检查后重新输入
+        {$_('joiner.invalidCode')}
       </div>
     {/if}
     <button class="wm-btn primary" disabled={!valid || busy} on:click={connect}>
-      {busy ? '连接中…' : '连接'}
+      {busy ? $_('joiner.connecting') : $_('joiner.connect')}
     </button>
     <div class="wm-mt-auto"></div>
-    <button class="wm-btn ghost" on:click={back}>返回</button>
+    <button class="wm-btn ghost" on:click={back}>{$_('common.back')}</button>
   </div>
 </div>
 

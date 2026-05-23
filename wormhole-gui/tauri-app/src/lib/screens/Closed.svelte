@@ -1,4 +1,5 @@
 <script>
+  import { _ } from 'svelte-i18n';
   import Icon from '../Icon.svelte';
   import SimpleHeader from '../components/SimpleHeader.svelte';
   import { reset } from '../store.js';
@@ -13,12 +14,12 @@
     style="align-items:center; justify-content:center; text-align:center; padding:40px 32px;"
   >
     <div class="badge"><Icon name="shield-check" size={26} stroke={1.6} /></div>
-    <h2 style="margin-top:8px; text-align:center; font-size:18px;">会话已结束</h2>
+    <h2 style="margin-top:8px; text-align:center; font-size:18px;">{$_('closed.title')}</h2>
     <div class="desc" style="text-align:center; max-width:320px;">
-      会话密钥已从内存清除。
+      {$_('closed.desc')}
     </div>
     <div class="wm-row" style="justify-content:center; margin-top:8px;">
-      <button class="wm-btn primary" on:click={back}>开始新会话</button>
+      <button class="wm-btn primary" on:click={back}>{$_('closed.newSession')}</button>
     </div>
   </div>
 </div>

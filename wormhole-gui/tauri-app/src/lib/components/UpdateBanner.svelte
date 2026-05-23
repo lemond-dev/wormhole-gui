@@ -1,4 +1,6 @@
 <script>
+  import { _ } from 'svelte-i18n';
+  import { get } from 'svelte/store';
   import { updateState, updateDismissedThisSession } from '../store.js';
   import { applyUpdate } from '../ipc.js';
 
@@ -32,7 +34,7 @@
       updateState.set({
         status: 'error',
         version: state.version,
-        message: '更新已下载，但应用未自动重启',
+        message: get(_)('update.notRestartedError'),
       });
     } catch (err) {
       updateState.set({
@@ -58,14 +60,14 @@
     {#if state.status === 'available'}
       <div class="row">
         <span class="msg">
-          🔄 发现新版本 v{state.version}
+          {$_('update.available', { values: { version: state.version } })}
           {#if state.form === 'portable'}
-            <span class="form-hint">便携版会替换当前 exe</span>
+            <span class="form-hint">{$_('update.portableHint')}</span>
           {/if}
         </span>
         <div class="actions">
-          <button class="btn primary" on:click={onApply}>立即更新</button>
-          <button class="btn" on:click={onDismiss}>稍后</button>
+          <button class="btn primary" on:click={onApply}>{$_('update.applyNow')}</button>
+          <button class="btn" on:click={onDismiss}>{$_('update.later')}</button>
         </div>
       </div>
       {#if state.notes}
@@ -74,7 +76,7 @@
     {:else if state.status === 'downloading'}
       <div class="row">
         <span class="msg">
-          ⬇️ 下载 v{state.version}
+          {$_('update.downloading', { values: { version: state.version } })}
           <span class="bytes">
             {fmt(state.downloaded)}{#if state.total} / {fmt(state.total)}{/if}
           </span>
@@ -86,11 +88,11 @@
     {:else if state.status === 'error'}
       <div class="row">
         <span class="msg err-msg">
-          ⚠️ 更新失败：{state.message}
+          {$_('update.failed', { values: { message: state.message } })}
         </span>
         <div class="actions">
-          <button class="btn primary" on:click={onApply}>重试</button>
-          <button class="btn" on:click={onCloseError}>关闭</button>
+          <button class="btn primary" on:click={onApply}>{$_('common.retry')}</button>
+          <button class="btn" on:click={onCloseError}>{$_('common.close')}</button>
         </div>
       </div>
     {/if}

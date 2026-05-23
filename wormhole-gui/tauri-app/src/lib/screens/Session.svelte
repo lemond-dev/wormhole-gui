@@ -1,5 +1,6 @@
 <script>
   import { tick, onMount, onDestroy } from 'svelte';
+  import { _ } from 'svelte-i18n';
   import { open } from '@tauri-apps/plugin-dialog';
   import { listen } from '@tauri-apps/api/event';
   import Icon from '../Icon.svelte';
@@ -124,25 +125,25 @@
   <Composer
     onSend={onSend}
     onAttach={pickFile}
-    placeholder={hasInProgress ? '输入消息（传输进行中）…' : '输入消息或拖入文件…'}
+    placeholder={hasInProgress ? $_('session.composerPlaceholderBusy') : $_('session.composerPlaceholder')}
   />
 
   {#if showDrop}
     <div class="wm-drop-overlay">
       <Icon name="download" size={28} stroke={1.6} />
-      <div>松手以发送</div>
+      <div>{$_('session.dropToSend')}</div>
     </div>
   {/if}
 
   {#if showCloseConfirm}
     <div class="wm-modal-backdrop">
       <div class="wm-modal">
-        <h3>{$closeIntent === 'window' ? '关闭窗口？' : '结束本次会话？'}</h3>
-        <p>会话关闭后无法恢复，所有未完成的传输都会丢失。</p>
+        <h3>{$closeIntent === 'window' ? $_('session.confirmCloseTitleWindow') : $_('session.confirmCloseTitleSession')}</h3>
+        <p>{$_('session.confirmCloseDesc')}</p>
         <div class="actions">
-          <button class="wm-btn ghost" style="flex:1;" on:click={cancelClose}>继续会话</button>
+          <button class="wm-btn ghost" style="flex:1;" on:click={cancelClose}>{$_('session.continueSession')}</button>
           <button class="wm-btn danger" style="flex:1;" on:click={confirmClose}>
-            {$closeIntent === 'window' ? '关闭窗口' : '结束会话'}
+            {$closeIntent === 'window' ? $_('session.closeWindow') : $_('session.endSession')}
           </button>
         </div>
       </div>

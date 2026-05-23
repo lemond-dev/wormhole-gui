@@ -4,6 +4,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
 import {
   appState,
   code,
@@ -50,10 +51,12 @@ export async function setupListeners() {
   unlistenFns.push(
     await listen('session:connected', () => {
       appState.set('connected');
+      // Snapshot the locale at event time — if the user switches language
+      // later, the timeline keeps the message in its original wording.
       pushMessage({
         kind: 'system',
         id: 'sys-connected',
-        content: '已建立加密通道',
+        content: get(_)('session.connected'),
         ts: Date.now(),
       });
     })
@@ -170,7 +173,7 @@ export async function setupListeners() {
       const { id, ok, dir, save_path } = e.payload;
       const next = ok
         ? { state: dir === 'in' ? 'received' : 'sent', save_path: save_path || null }
-        : { state: 'failed', error: '传输失败' };
+        : { state: 'failed', error: get(_)('fileCard.failed') };
       updateMessage(id, next);
     })
   );

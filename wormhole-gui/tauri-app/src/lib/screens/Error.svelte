@@ -1,9 +1,12 @@
 <script>
+  import { _ } from 'svelte-i18n';
   import Icon from '../Icon.svelte';
   import SimpleHeader from '../components/SimpleHeader.svelte';
   import { lastError, closeReason, reset } from '../store.js';
 
   // Map error/close reason to a kind for the design's error variants.
+  // We pattern-match against both languages so the heuristic still works
+  // whether the message arrived from a zh-locked session or an en one.
   $: kind = pickKind($lastError, $closeReason);
 
   function pickKind(err, reason) {
@@ -16,26 +19,10 @@
   }
 
   $: meta = {
-    pake: {
-      icon: 'shield-alert',
-      title: '短码不正确',
-      body: '请检查后重新输入，或让对方重新生成。注意短码大小写敏感且不能复用。',
-    },
-    network: {
-      icon: 'wifi-off',
-      title: '连接已中断',
-      body: '本次会话结束。请重新生成短码再试一次。',
-    },
-    'peer-closed': {
-      icon: 'log-out',
-      title: '对方已结束会话',
-      body: '所有传输已停止。',
-    },
-    expired: {
-      icon: 'alert-circle',
-      title: '短码已过期',
-      body: '短码 5 分钟未使用已失效，请重新生成。',
-    },
+    pake: { icon: 'shield-alert', titleKey: 'error.titlePake', bodyKey: 'error.descPake' },
+    network: { icon: 'wifi-off', titleKey: 'error.titleConnection', bodyKey: 'error.descConnection' },
+    'peer-closed': { icon: 'log-out', titleKey: 'error.titlePeerClosed', bodyKey: 'error.descPeerClosed' },
+    expired: { icon: 'alert-circle', titleKey: 'error.titleExpired', bodyKey: 'error.descExpired' },
   }[kind];
 
   function back() { reset(); }
@@ -51,15 +38,15 @@
     <div class="badge">
       <Icon name={meta.icon} size={26} stroke={1.6} />
     </div>
-    <h2 style="margin-top:8px; text-align:center; font-size:18px;">{meta.title}</h2>
-    <div class="desc" style="text-align:center; max-width:320px;">{meta.body}</div>
+    <h2 style="margin-top:8px; text-align:center; font-size:18px;">{$_(meta.titleKey)}</h2>
+    <div class="desc" style="text-align:center; max-width:320px;">{$_(meta.bodyKey)}</div>
     {#if $lastError?.message}
       <div class="raw mono">{$lastError.message}</div>
     {/if}
     <div class="wm-row" style="justify-content:center; margin-top:8px;">
-      <button class="wm-btn" on:click={back}>返回</button>
+      <button class="wm-btn" on:click={back}>{$_('common.back')}</button>
       <button class="wm-btn primary" on:click={restart}>
-        <Icon name="refresh" size={13} /> 重新开始
+        <Icon name="refresh" size={13} /> {$_('error.restart')}
       </button>
     </div>
   </div>

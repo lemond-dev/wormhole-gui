@@ -1,8 +1,11 @@
 <script>
   import { tick } from 'svelte';
+  import { _ } from 'svelte-i18n';
   import Icon from '../Icon.svelte';
 
-  export let placeholder = '输入消息或拖入文件…';
+  // Caller can override; default falls back to the localised placeholder.
+  // Pass `null` (or omit) to use the i18n value; pass a string to force.
+  export let placeholder = null;
   export let onSend; // (text) => Promise<void>
   export let onAttach = null; // () => Promise<void>
 
@@ -46,7 +49,7 @@
   <div class="row">
     <button
       class="icon-btn attach"
-      title="附件 (Ctrl+O)"
+      title={$_('composer.attachTitle')}
       disabled={!onAttach}
       on:click={() => onAttach && onAttach()}
     >
@@ -55,7 +58,7 @@
     <textarea
       bind:value
       bind:this={textareaEl}
-      placeholder={placeholder}
+      placeholder={placeholder ?? $_('composer.placeholder')}
       rows={1}
       on:keydown={handleKey}
       on:input={autoresize}
@@ -63,7 +66,7 @@
     <button
       class="send-btn"
       disabled={!value.trim() || sending}
-      title="发送 (Enter)"
+      title={$_('composer.sendTitle')}
       on:click={doSend}
     >
       <Icon name="send" size={14} stroke={2.2} />

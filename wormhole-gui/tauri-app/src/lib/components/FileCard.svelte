@@ -1,4 +1,5 @@
 <script>
+  import { _ } from 'svelte-i18n';
   import Icon from '../Icon.svelte';
   import { acceptFile, rejectFile, cancelFile, revealInFolder } from '../ipc.js';
 
@@ -53,23 +54,23 @@
   {#if dangerous && m.state === 'offer'}
     <div class="danger-banner">
       <Icon name="alert-triangle" size={13} stroke={2} />
-      这是可执行文件，仅在你确认信任发送方时接收
+      {$_('fileCard.execWarn')}
     </div>
   {/if}
 
   {#if m.state === 'offer'}
-    <div style="font-size:12px; color:var(--warn-ink);">对方想发送一个文件</div>
+    <div style="font-size:12px; color:var(--warn-ink);">{$_('fileCard.incomingOffer')}</div>
     <div class="actions">
-      <button class="wm-btn ghost" on:click={onReject}>拒绝</button>
+      <button class="wm-btn ghost" on:click={onReject}>{$_('fileCard.reject')}</button>
       <button class="wm-btn {dangerous ? 'danger' : 'primary'}" on:click={onAccept}>
-        {dangerous ? '仍然接收' : '接收'}
+        {dangerous ? $_('fileCard.acceptAnyway') : $_('fileCard.accept')}
       </button>
     </div>
   {:else if m.state === 'awaiting'}
-    <div style="font-size:12px; color:var(--text-3);">已发送给对方，等待接受…</div>
+    <div style="font-size:12px; color:var(--text-3);">{$_('fileCard.awaiting')}</div>
     <div class="actions">
       <button class="wm-btn ghost" on:click={onCancel}>
-        <Icon name="x" size={12} /> 取消
+        <Icon name="x" size={12} /> {$_('common.cancel')}
       </button>
     </div>
   {:else if m.state === 'sending' || m.state === 'receiving'}
@@ -77,30 +78,30 @@
     <div class="wm-row" style="justify-content:space-between;">
       <span class="sub">{pct}% · {fmtBytes(m.bytes || 0)}</span>
       <button class="wm-btn ghost" style="padding:4px 10px; font-size:12px;" on:click={onCancel}>
-        <Icon name="x" size={12} /> 取消
+        <Icon name="x" size={12} /> {$_('common.cancel')}
       </button>
     </div>
   {:else if m.state === 'received'}
     <div class="actions">
-      <span class="sub" style="flex:1;">已保存</span>
+      <span class="sub" style="flex:1;">{$_('fileCard.savedLabel')}</span>
       <button
         class="wm-btn ghost"
         on:click={() => m.save_path && revealInFolder(m.save_path)}
         disabled={!m.save_path}
         style="padding:4px 10px; font-size:12px; flex:0 0 auto;"
       >
-        <Icon name="folder" size={12} /> 打开所在目录
+        <Icon name="folder" size={12} /> {$_('fileCard.openFolder')}
       </button>
     </div>
   {:else if m.state === 'sent'}
-    <div style="font-size:12px; color:var(--brand-ink);">已送达</div>
+    <div style="font-size:12px; color:var(--brand-ink);">{$_('fileCard.sent')}</div>
   {:else if m.state === 'failed'}
     <div class="error-line">
       <Icon name="alert-circle" size={13} />
-      {m.error || '传输失败'}
+      {m.error || $_('fileCard.failed')}
     </div>
   {:else if m.state === 'cancelled'}
-    <div style="font-size:12px; color:var(--text-3);">已取消</div>
+    <div style="font-size:12px; color:var(--text-3);">{$_('fileCard.cancelled')}</div>
   {/if}
 </div>
 

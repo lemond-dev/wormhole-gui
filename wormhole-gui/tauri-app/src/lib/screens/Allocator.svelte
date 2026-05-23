@@ -1,5 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import { _ } from 'svelte-i18n';
+  import { get } from 'svelte/store';
   import SimpleHeader from '../components/SimpleHeader.svelte';
   import CodeBanner from '../components/CodeBanner.svelte';
   import { code, appState, reset, lastError } from '../store.js';
@@ -24,7 +26,7 @@
         clearInterval(timer);
         // Mark this as an "expired" error so the Error screen picks the
         // right wording, then close the backend session.
-        lastError.set({ code: 'code_expired', message: '短码已过期 (code expired)' });
+        lastError.set({ code: 'code_expired', message: get(_)('allocator.ttlExpired') });
         closeSession().catch(() => {});
         appState.set('error');
       }
@@ -53,24 +55,24 @@
 </script>
 
 <div class="wm-app">
-  <SimpleHeader title="发送" onBack={cancel} />
+  <SimpleHeader title={$_('allocator.title')} onBack={cancel} />
   <div class="wm-flowpage">
     <CodeBanner code={$code || ''} onCopy={copyCode} />
     <div class="desc">
-      把这个短码用电话／当面／Signal 等可信渠道告诉对方。<br />
-      <strong>不要在同一渠道既发短码又发内容。</strong>
+      {$_('allocator.instr1')}<br />
+      <strong>{$_('allocator.instr2')}</strong>
     </div>
     <div class="wm-wait">
       <span class="ring"></span>
-      等待对方连接…
+      {$_('allocator.waiting')}
     </div>
     <div class="countdown" class:urgent>
-      短码有效期 <b>{timeStr}</b>
+      {$_('allocator.ttlLabel')}<b>{timeStr}</b>
     </div>
     <div class="wm-mt-auto"></div>
-    <button class="wm-btn ghost" on:click={cancel}>取消</button>
+    <button class="wm-btn ghost" on:click={cancel}>{$_('common.cancel')}</button>
   </div>
   {#if toast}
-    <div class="wm-toast">已复制</div>
+    <div class="wm-toast">{$_('common.copied')}</div>
   {/if}
 </div>

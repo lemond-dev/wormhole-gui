@@ -1,4 +1,5 @@
 <script>
+  import { _ } from 'svelte-i18n';
   import Icon from '../Icon.svelte';
   export let code = '';
   export let onCopy;
@@ -9,13 +10,13 @@
 </script>
 
 <div class="wm-codebanner">
-  <div class="label">你的一次性短码</div>
+  <div class="label">{$_('codeBanner.label')}</div>
   <div class="code">
     <span class="num">{nameplate}</span>{rest ? `-${rest}` : ''}
   </div>
   <div class="actions">
     <button class="wm-btn" on:click={onCopy} disabled={!code}>
-      <Icon name="copy" size={14} /> 复制
+      <Icon name="copy" size={14} /> {$_('common.copy')}
     </button>
   </div>
 </div>

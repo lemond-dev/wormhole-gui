@@ -1,4 +1,5 @@
 <script>
+  import { _ } from 'svelte-i18n';
   import Icon from '../Icon.svelte';
   import SimpleHeader from '../components/SimpleHeader.svelte';
   import { closeSession } from '../ipc.js';
@@ -11,7 +12,7 @@
 </script>
 
 <div class="wm-app">
-  <SimpleHeader title="连接中" onBack={cancel} />
+  <SimpleHeader title={$_('connecting.title')} onBack={cancel} />
   <div
     class="wm-flowpage"
     style="align-items:center; justify-content:center; text-align:center; gap:18px; padding:40px 32px;"
@@ -22,12 +23,12 @@
         <Icon name="lock" size={20} stroke={2} />
       </div>
     </div>
-    <div style="font-size:15px; font-weight:500;">正在协商密钥…</div>
+    <div style="font-size:15px; font-weight:500;">{$_('connecting.negotiating')}</div>
     <div class="desc" style="text-align:center; max-width:280px;">
-      短码已匹配，正在与对方建立加密通道。这一步通常只需要几秒。
+      {$_('connecting.desc')}
     </div>
     <div class="wm-mt-auto"></div>
-    <button class="wm-btn ghost" on:click={cancel}>取消</button>
+    <button class="wm-btn ghost" on:click={cancel}>{$_('common.cancel')}</button>
   </div>
 </div>
 

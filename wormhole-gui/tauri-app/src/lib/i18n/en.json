@@ -7,9 +7,129 @@
     "close": "Close",
     "retry": "Retry",
     "later": "Later",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "settings": "Settings",
+    "copied": "Copied",
+    "copy": "Copy"
+  },
+  "idle": {
+    "title": "One-time encrypted session",
+    "desc1": "Pair two devices with a short code; send text and files both ways.",
+    "desc2": "Closing the app destroys everything — no accounts, no history.",
+    "send": "Send",
+    "sendSub": "Generate code",
+    "recv": "Receive",
+    "recvSub": "Enter code",
+    "footer": "End-to-end encrypted; no signup required."
+  },
+  "allocator": {
+    "title": "Send",
+    "instr1": "Share this short code over a trusted channel (phone, in person, Signal, …).",
+    "instr2": "Don't send the code and the content over the same channel.",
+    "waiting": "Waiting for peer to connect…",
+    "ttlLabel": "Expires in ",
+    "ttlExpired": "Code expired"
+  },
+  "joiner": {
+    "title": "Receive",
+    "subtitle": "Enter the code your peer gave you",
+    "formatHint": "Format looks like ",
+    "formatHintTail": ". Auto-lowercased and hyphenated.",
+    "invalidCode": "Wrong code. Please check and re-enter.",
+    "connecting": "Connecting…",
+    "connect": "Connect"
+  },
+  "connecting": {
+    "title": "Connecting",
+    "negotiating": "Negotiating keys…",
+    "desc": "Code matched. Establishing an encrypted channel with the peer; this usually takes only a few seconds."
+  },
+  "session": {
+    "connected": "Encrypted channel established",
+    "composerPlaceholder": "Type a message or drop a file…",
+    "composerPlaceholderBusy": "Type a message (transfer in progress)…",
+    "dropToSend": "Release to send",
+    "confirmCloseTitleWindow": "Close window?",
+    "confirmCloseTitleSession": "End this session?",
+    "confirmCloseDesc": "Closing the session is irreversible; all in-flight transfers will be lost.",
+    "continueSession": "Continue session",
+    "closeWindow": "Close window",
+    "endSession": "End session"
+  },
+  "closed": {
+    "title": "Session ended",
+    "desc": "Session key wiped from memory.",
+    "newSession": "Start new session"
+  },
+  "error": {
+    "titlePake": "Wrong code",
+    "descPake": "Please check the code and try again, or ask your peer to generate a new one. Codes are case-sensitive and single-use.",
+    "titleConnection": "Connection lost",
+    "descConnection": "The session ended. Please generate a new code and retry.",
+    "titlePeerClosed": "Peer ended the session",
+    "descPeerClosed": "All transfers have stopped.",
+    "titleExpired": "Code expired",
+    "descExpired": "Codes expire 5 minutes after generation if unused. Please generate a new one.",
+    "restart": "Restart"
+  },
+  "topbar": {
+    "encrypted": "Encrypted",
+    "code": "Code",
+    "duration": "Connection duration",
+    "endSession": "End session"
+  },
+  "composer": {
+    "placeholder": "Type a message or drop a file…",
+    "attachTitle": "Attach (Ctrl+O)",
+    "sendTitle": "Send (Enter)"
+  },
+  "codeBanner": {
+    "label": "Your one-time code"
+  },
+  "fileCard": {
+    "execWarn": "This is an executable file. Only accept if you trust the sender.",
+    "incomingOffer": "Peer wants to send a file",
+    "reject": "Reject",
+    "accept": "Accept",
+    "acceptAnyway": "Accept anyway",
+    "awaiting": "Offer sent; waiting for the peer to accept…",
+    "savedLabel": "Saved",
+    "openFolder": "Open containing folder",
+    "sent": "Delivered",
+    "failed": "Transfer failed",
+    "cancelled": "Cancelled"
+  },
+  "simpleHeader": {
+    "backTitle": "Back",
+    "settingsTitle": "Settings"
   },
   "settings": {
-    "title": "Settings"
+    "title": "Settings",
+    "downloadDirLabel": "Default download directory",
+    "downloadDirPick": "Choose…",
+    "downloadDirHint": "Received files are timestamped to avoid overwrites.",
+    "autoAcceptLabel": "Auto-accept files",
+    "autoAcceptHint": "Disabled in this build — every transfer needs a manual confirmation to avoid silent drops of malicious carriers (.lnk / .hta / .iso / macro docs, …).",
+    "numericCodeLabel": "Use numeric short code",
+    "numericCodeHint": "Example: 15-123-456. Slightly weaker than the word list but easier to read aloud; takes effect on the next session.",
+    "languageLabel": "Language / 语言",
+    "languageHint": "Takes effect immediately; error messages in new sessions use the new language after restart.",
+    "languageZh": "中文",
+    "languageEn": "English",
+    "relayHint": "Leave blank to use the built-in default. Both peers must point at the same mailbox to meet.",
+    "resetDefaults": "Reset to defaults",
+    "restartWarning": "⚠ Changed — restart required to apply",
+    "checkUpdate": "Check for updates",
+    "checking": "Checking…",
+    "upToDate": "Already up to date"
+  },
+  "update": {
+    "available": "🔄 New version v{version} available",
+    "portableHint": "Portable build will replace the current exe",
+    "applyNow": "Update now",
+    "later": "Later",
+    "downloading": "⬇️ Downloading v{version}",
+    "failed": "⚠️ Update failed: {message}",
+    "notRestartedError": "Update downloaded but the app did not auto-restart"
   }
 }

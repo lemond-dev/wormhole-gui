@@ -7,9 +7,129 @@
     "close": "关闭",
     "retry": "重试",
     "later": "稍后",
-    "loading": "加载中…"
+    "loading": "加载中…",
+    "settings": "设置",
+    "copied": "已复制",
+    "copy": "复制"
+  },
+  "idle": {
+    "title": "建立一次性加密会话",
+    "desc1": "用一个短码把两台设备配对，双向收发文字与文件。",
+    "desc2": "关闭即销毁，没有账号、没有历史。",
+    "send": "发送",
+    "sendSub": "生成短码",
+    "recv": "接收",
+    "recvSub": "输入短码",
+    "footer": "端到端加密的临时会话，不需要注册"
+  },
+  "allocator": {
+    "title": "发送",
+    "instr1": "把这个短码用电话／当面／Signal 等可信渠道告诉对方。",
+    "instr2": "不要在同一渠道既发短码又发内容。",
+    "waiting": "等待对方连接…",
+    "ttlLabel": "短码有效期 ",
+    "ttlExpired": "短码已过期 (code expired)"
+  },
+  "joiner": {
+    "title": "接收",
+    "subtitle": "输入对方给你的短码",
+    "formatHint": "格式形如 ",
+    "formatHintTail": "。自动小写并加连字符。",
+    "invalidCode": "短码不正确，请检查后重新输入",
+    "connecting": "连接中…",
+    "connect": "连接"
+  },
+  "connecting": {
+    "title": "连接中",
+    "negotiating": "正在协商密钥…",
+    "desc": "短码已匹配，正在与对方建立加密通道。这一步通常只需要几秒。"
+  },
+  "session": {
+    "connected": "已建立加密通道",
+    "composerPlaceholder": "输入消息或拖入文件…",
+    "composerPlaceholderBusy": "输入消息（传输进行中）…",
+    "dropToSend": "松手以发送",
+    "confirmCloseTitleWindow": "关闭窗口？",
+    "confirmCloseTitleSession": "结束本次会话？",
+    "confirmCloseDesc": "会话关闭后无法恢复，所有未完成的传输都会丢失。",
+    "continueSession": "继续会话",
+    "closeWindow": "关闭窗口",
+    "endSession": "结束会话"
+  },
+  "closed": {
+    "title": "会话已结束",
+    "desc": "会话密钥已从内存清除。",
+    "newSession": "开始新会话"
+  },
+  "error": {
+    "titlePake": "短码不正确",
+    "descPake": "请检查后重新输入，或让对方重新生成。注意短码大小写敏感且不能复用。",
+    "titleConnection": "连接已中断",
+    "descConnection": "本次会话结束。请重新生成短码再试一次。",
+    "titlePeerClosed": "对方已结束会话",
+    "descPeerClosed": "所有传输已停止。",
+    "titleExpired": "短码已过期",
+    "descExpired": "短码 5 分钟未使用已失效，请重新生成。",
+    "restart": "重新开始"
+  },
+  "topbar": {
+    "encrypted": "已加密",
+    "code": "短码",
+    "duration": "连接时长",
+    "endSession": "结束会话"
+  },
+  "composer": {
+    "placeholder": "输入消息或拖入文件…",
+    "attachTitle": "附件 (Ctrl+O)",
+    "sendTitle": "发送 (Enter)"
+  },
+  "codeBanner": {
+    "label": "你的一次性短码"
+  },
+  "fileCard": {
+    "execWarn": "这是可执行文件，仅在你确认信任发送方时接收",
+    "incomingOffer": "对方想发送一个文件",
+    "reject": "拒绝",
+    "accept": "接收",
+    "acceptAnyway": "仍然接收",
+    "awaiting": "已发送给对方，等待接受…",
+    "savedLabel": "已保存",
+    "openFolder": "打开所在目录",
+    "sent": "已送达",
+    "failed": "传输失败",
+    "cancelled": "已取消"
+  },
+  "simpleHeader": {
+    "backTitle": "返回",
+    "settingsTitle": "设置"
   },
   "settings": {
-    "title": "设置"
+    "title": "设置",
+    "downloadDirLabel": "默认下载目录",
+    "downloadDirPick": "选择…",
+    "downloadDirHint": "接收的文件会带时间戳避免覆盖。",
+    "autoAcceptLabel": "自动接收文件",
+    "autoAcceptHint": "暂时禁用 — 当前版本统一使用人工确认，避免恶意载体（.lnk / .hta / .iso / 宏文档等）自动落盘。",
+    "numericCodeLabel": "使用数字短码",
+    "numericCodeHint": "示例：15-123-456。比英文词稍弱但口播更顺；下次会话生效。",
+    "languageLabel": "语言 / Language",
+    "languageHint": "立即生效；新会话的错误提示在重启后用新语言。",
+    "languageZh": "中文",
+    "languageEn": "English",
+    "relayHint": "留空则使用默认值。两端必须配相同的 mailbox 才能相遇。",
+    "resetDefaults": "恢复默认",
+    "restartWarning": "⚠ 已修改，重启软件后生效",
+    "checkUpdate": "检查更新",
+    "checking": "检查中…",
+    "upToDate": "已是最新版本"
+  },
+  "update": {
+    "available": "🔄 发现新版本 v{version}",
+    "portableHint": "便携版会替换当前 exe",
+    "applyNow": "立即更新",
+    "later": "稍后",
+    "downloading": "⬇️ 下载 v{version}",
+    "failed": "⚠️ 更新失败：{message}",
+    "notRestartedError": "更新已下载，但应用未自动重启"
   }
 }
