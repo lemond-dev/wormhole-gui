@@ -174,17 +174,16 @@ jobs:
             ${{ steps.artifacts.outputs.setup_path }}
             ${{ steps.artifacts.outputs.setup_sig_path }}
 
-      # peaceiris/actions-gh-pages handles first-run branch creation
-      # automatically (orphan branch with just our staged files). On
-      # subsequent runs `keep_files: false` means latest.json is the only
-      # file kept — which is exactly what we want, no archive of old
-      # manifests.
+      # keep_files: true means the homepage (index.html committed to the
+      # gh-pages branch out-of-band) survives each release; only
+      # latest.json is overwritten. The action handles first-run branch
+      # creation if gh-pages doesn't exist yet.
       - name: Publish manifest to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: gh-pages-staging
           publish_branch: gh-pages
-          keep_files: false
+          keep_files: true
           force_orphan: false
           commit_message: 'release: latest.json for ${{ github.ref_name }}'
