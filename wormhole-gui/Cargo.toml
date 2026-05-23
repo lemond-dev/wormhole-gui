@@ -7,7 +7,7 @@ version = "0.2.5"
 edition = "2021"
 license = "MIT"
 authors = ["lemon"]
-repository = "https://github.com/lemond-dev/chat_one"
+repository = "https://github.com/lemond-dev/wormhole-gui"
 
 [workspace.dependencies]
 magic-wormhole = { version = "0.8", default-features = false, features = ["transit", "transfer", "native-tls"] }

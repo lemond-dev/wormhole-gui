@@ -16,7 +16,7 @@
 
 ## 安装
 
-[Releases](https://github.com/lemond-dev/chat_one/releases) 提供两种下载：
+[Releases](https://github.com/lemond-dev/wormhole-gui/releases) 提供两种下载：
 
 | 形态 | 适用场景 | 文件 |
 |---|---|---|
@@ -49,7 +49,7 @@
 ## 仓库结构
 
 ```
-chat_one/
+.
 ├── wormhole-gui-architecture.md   架构方案 + spike 验证记录
 ├── wormhole-spike/                 协议层验证 spike（13 项已 PASS）
 └── wormhole-gui/                   主项目
@@ -80,8 +80,8 @@ pnpm tauri:dev
 
 # 打包：便携 exe + NSIS 安装器
 pnpm tauri:build
-# → ../target/release/wormhole-gui.exe                 （便携）
-# → ../target/release/bundle/nsis/wormhole-gui-setup.exe  （安装器）
+# → ../target/release/wormhole-gui.exe                              （便携）
+# → ../target/release/bundle/nsis/wormhole-gui_<version>_x64-setup.exe  （安装器）
 ```
 
 本地用两个实例测试时，**直接运行打包后的便携 exe 两次**（每个实例独立进程）。`pnpm tauri:dev` 是单实例模式。
