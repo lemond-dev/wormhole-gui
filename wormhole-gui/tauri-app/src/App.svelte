@@ -3,7 +3,8 @@
   import './styles.css';
 
   import { appState } from './lib/store.js';
-  import { setupListeners, teardownListeners, triggerUpdateCheck } from './lib/ipc.js';
+  import { setupListeners, teardownListeners, triggerUpdateCheck, getConfig } from './lib/ipc.js';
+  import { setLanguageFromConfig } from './lib/i18n';
 
   import Idle from './lib/screens/Idle.svelte';
   import Allocator from './lib/screens/Allocator.svelte';
@@ -19,8 +20,18 @@
   // network — keeps cold-start feel snappy and avoids a network blip on
   // the splash screen.
   let updateCheckTimer = null;
-  onMount(() => {
+  onMount(async () => {
     setupListeners();
+    // Pull persisted language out of Config and tell svelte-i18n. Boot
+    // already defaults to `zh`, so this is a no-op for fresh installs;
+    // a returning user who switched to English sees the change after one
+    // frame of Chinese rather than the full first paint.
+    try {
+      const cfg = await getConfig();
+      setLanguageFromConfig(cfg.language);
+    } catch (e) {
+      console.warn('config load failed; staying on default locale', e);
+    }
     updateCheckTimer = setTimeout(() => {
       triggerUpdateCheck({ silent: true });
     }, 2000);

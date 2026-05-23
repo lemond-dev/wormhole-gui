@@ -53,6 +53,7 @@ pub async fn start_session(
             mailbox_relay,
             transit_relay,
             numeric_code: config.numeric_code(),
+            language: config.language(),
         },
     );
     let evt_rx = handle.evt_rx.clone();

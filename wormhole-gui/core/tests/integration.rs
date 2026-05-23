@@ -21,6 +21,7 @@ fn test_session_config(numeric: bool) -> SessionConfig {
         mailbox_relay: DEFAULT_MAILBOX_RELAY.into(),
         transit_relay: DEFAULT_TRANSIT_RELAY.into(),
         numeric_code: numeric,
+        language: "zh".into(),
     }
 }
 

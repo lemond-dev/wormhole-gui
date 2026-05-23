@@ -1,0 +1,15 @@
+{
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "close": "Close",
+    "retry": "Retry",
+    "later": "Later",
+    "loading": "Loading…"
+  },
+  "settings": {
+    "title": "Settings"
+  }
+}

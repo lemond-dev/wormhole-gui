@@ -131,6 +131,12 @@ pub struct SessionConfig {
     pub mailbox_relay: String,
     pub transit_relay: String,
     pub numeric_code: bool,
+    /// UI language code ("zh" or "en"). The session locks this at spawn
+    /// time so error messages emitted *during* the session use a
+    /// consistent language even if the user switches in Settings
+    /// mid-transfer — matches the same "restart to apply" semantics the
+    /// relay fields use.
+    pub language: String,
 }
 
 pub fn spawn_session_thread(role: Role, cfg: SessionConfig) -> SessionHandle {

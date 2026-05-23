@@ -6,11 +6,16 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 // Re-export the core's defaults at module path so internal callers in this
 // crate keep their existing `config::DEFAULT_*` references working.
 pub use wormhole_gui_core::{DEFAULT_MAILBOX_RELAY, DEFAULT_TRANSIT_RELAY};
+
+/// Default UI language for new installs. v0.2.x and older effectively had
+/// `"zh"` hard-coded; we make it explicit here and let users switch in
+/// Settings.
+pub const DEFAULT_LANGUAGE: &str = "zh";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -30,6 +35,11 @@ pub struct Config {
     pub mailbox_relay: String,
     #[serde(default = "default_transit_relay")]
     pub transit_relay: String,
+    /// New in v0.3.1. UI language ("zh" or "en"); unknown values fall back
+    /// to "zh" at read time (see [`ConfigState::language`]) so a typo in
+    /// the on-disk config can't render the app un-usable.
+    #[serde(default = "default_language")]
+    pub language: String,
 }
 
 fn default_version() -> u32 {
@@ -48,6 +58,10 @@ fn default_transit_relay() -> String {
     DEFAULT_TRANSIT_RELAY.into()
 }
 
+fn default_language() -> String {
+    DEFAULT_LANGUAGE.into()
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -57,6 +71,7 @@ impl Default for Config {
             numeric_code: true,
             mailbox_relay: default_mailbox_relay(),
             transit_relay: default_transit_relay(),
+            language: default_language(),
         }
     }
 }
@@ -142,6 +157,16 @@ impl ConfigState {
             DEFAULT_TRANSIT_RELAY.into()
         } else {
             v
+        }
+    }
+    /// UI language. Unknown values fall back to the default so a typo
+    /// can't lock the user out of the UI; the supported set is the same
+    /// one the frontend i18n module ships dictionaries for.
+    pub fn language(&self) -> String {
+        let v = self.0.lock().unwrap().language.trim().to_string();
+        match v.as_str() {
+            "zh" | "en" => v,
+            _ => DEFAULT_LANGUAGE.into(),
         }
     }
 }

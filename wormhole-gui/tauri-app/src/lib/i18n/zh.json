@@ -1,0 +1,15 @@
+{
+  "common": {
+    "back": "返回",
+    "cancel": "取消",
+    "confirm": "确认",
+    "save": "保存",
+    "close": "关闭",
+    "retry": "重试",
+    "later": "稍后",
+    "loading": "加载中…"
+  },
+  "settings": {
+    "title": "设置"
+  }
+}
